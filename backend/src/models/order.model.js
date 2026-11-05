@@ -20,9 +20,18 @@ const orderItemSchema = new mongoose.Schema({
     required: true,
     min: 1,
   },
+  sellerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+  },
+  sellerStatus: {
+    type: String,
+    enum: ["pending", "shipped", "delivered"],
+    default: "pending",
+  },
   image: {
     type: String,
-    required: true,
+    default: "",
   },
 });
 
@@ -45,7 +54,7 @@ const shippingAddressSchema = new mongoose.Schema({
   },
   zipCode: {
     type: String,
-    required: true,
+    default: "",
   },
   phoneNumber: {
     type: String,
@@ -80,8 +89,20 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "shipped", "delivered"],
+      enum: [
+        "pending",
+        "shipped",
+        "delivered",
+        "shipping",
+        "delivering",
+        "completed",
+        "cancelled",
+        "returning",
+      ],
       default: "pending",
+    },
+    sourceOrderId: {
+      type: String,
     },
     deliveredAt: {
       type: Date,
@@ -91,6 +112,14 @@ const orderSchema = new mongoose.Schema(
     },
   },
   { timestamps: true }
+);
+
+orderSchema.index(
+  { user: 1, sourceOrderId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { sourceOrderId: { $type: "string" } },
+  },
 );
 
 export const Order = mongoose.model("Order", orderSchema);

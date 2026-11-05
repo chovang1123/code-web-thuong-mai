@@ -1,13 +1,32 @@
 import { Router } from "express";
 import mongoose from "mongoose";
+import { Review } from "../models/review.model.js";
 import { WebReview } from "../models/web-review.model.js";
 
 const router = Router();
 
 router.get("/:productId", async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.productId)) return res.json([]);
-  const reviews = await WebReview.find({ productId: req.params.productId }).sort({ createdAt: -1 });
-  res.json(reviews);
+  try {
+    const [webReviews, purchasedReviews] = await Promise.all([
+      WebReview.find({ productId: req.params.productId }).lean(),
+      Review.find({ productId: req.params.productId })
+        .populate("userId", "name")
+        .lean(),
+    ]);
+    const reviews = [
+      ...webReviews,
+      ...purchasedReviews.map((review) => ({
+        ...review,
+        name: review.userId?.name || "Khách hàng",
+        text: review.text || "",
+      })),
+    ].sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
+    res.json(reviews);
+  } catch (error) {
+    console.error("Error fetching product reviews:", error);
+    res.status(500).json({ message: "Không thể tải đánh giá sản phẩm." });
+  }
 });
 
 router.post("/", async (req, res) => {

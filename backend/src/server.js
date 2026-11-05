@@ -12,13 +12,16 @@ import { connectDB } from "./config/db.js";
 import adminRoutes from "./routes/admin.route.js";
 import userRoutes from "./routes/user.route.js";
 import orderRoutes from "./routes/order.route.js";
-import reviewRoutes from "./routes/review.route.js";
+import reviewRoutes, { webOrderReviewRoutes } from "./routes/review.route.js";
 import productRoutes from "./routes/product.route.js";
-import cartRoutes from "./routes/cart.route.js";
+import cartRoutes, { webCartRoutes } from "./routes/cart.route.js";
 import authRoutes from "./routes/auth.route.js";
 import webAdminRoutes from "./routes/web-admin.route.js";
 import webReviewRoutes from "./routes/web-review.route.js";
+import sellerRoutes from "./routes/seller.route.js";
+import { webOrderRoutes } from "./routes/order.route.js";
 import { ensureAdmin } from "./controllers/auth.controller.js";
+import { advanceOrderStatuses } from "./controllers/order.controller.js";
 
 const app = express();
 
@@ -56,6 +59,10 @@ app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/web-reviews", webReviewRoutes);
 app.use("/api/web-admin", webAdminRoutes);
+app.use("/api/seller", sellerRoutes);
+app.use("/api/cart/web", webCartRoutes);
+app.use("/api/orders/web", webOrderRoutes);
+app.use("/api/reviews/web", webOrderReviewRoutes);
 
 app.use(clerkMiddleware()); // adds auth object under the req => req.auth
 
@@ -79,6 +86,15 @@ if (ENV.NODE_ENV === "production") {
 const startServer = async () => {
   await connectDB();
   await ensureAdmin();
+  const advanceOrderStatusesSafely = async () => {
+    try {
+      await advanceOrderStatuses();
+    } catch (error) {
+      console.error("Unable to advance order statuses:", error);
+    }
+  };
+  await advanceOrderStatusesSafely();
+  setInterval(advanceOrderStatusesSafely, 5_000);
   app.listen(ENV.PORT, () => {
     console.log("Server is up and running");
   });

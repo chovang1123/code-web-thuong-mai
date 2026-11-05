@@ -10,6 +10,7 @@
 - 📦 Order placement without online payment (suitable for e-commerce coursework)
 - 🗺️ Addresses System
 - 🏪 Admin Dashboard — Products, Orders, Customers & Stats
+- 🧑‍💼 Seller Workspace — Shop profile, product inventory, order fulfillment & revenue
 - ⚙️ Complete REST API (Node.js + Express) with Auth & Roles
 - 🛂 Admin-Only Protected Routes
 - 📦 Background Jobs with Inngest
@@ -36,6 +37,7 @@ NODE_ENV=development
 PORT=3000
 
 DB_URL=<YOUR_DB_URL>
+WEB_AUTH_SECRET=<LONG_RANDOM_SECRET>
 
 CLERK_PUBLISHABLE_KEY=<YOUR_CLERK_PUBLISHABLE_KEY>
 CLERK_SECRET_KEY=<YOUR_CLERK_SECRET_KEY>
@@ -74,6 +76,8 @@ npm install
 npm run dev
 ```
 
+On startup, the backend creates any missing MongoDB collections for users, products, carts, orders, reviews, and web reviews. Each shopper's cart is saved to MongoDB and cached in their browser. Set `WEB_AUTH_SECRET` to a long random value to sign cart synchronization tokens; if omitted, the backend uses the configured Clerk secret or database URL. After deploying this change, sign in again once to issue a cart-sync token. An order is saved to MongoDB only after checkout is confirmed.
+
 ---
 
 ## 🔧 Run the Website
@@ -85,3 +89,5 @@ npm run dev
 ```
 
 The website runs at `http://localhost:5173`. Product brands and seller/shop names can be set in the admin product form; shoppers can open a product's seller card to view that shop's products.
+
+To create a seller account, choose **Người bán** on the registration form and enter the shop name and location. The account is stored in MongoDB's `users` collection with the `seller` role; sellers can then manage their own products, stock, shop details, orders, and revenue from the seller dashboard.

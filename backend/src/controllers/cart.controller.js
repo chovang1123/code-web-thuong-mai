@@ -1,5 +1,6 @@
 import { Cart } from "../models/cart.model.js";
 import { Product } from "../models/product.model.js";
+import mongoose from "mongoose";
 
 export async function getCart(req, res) {
   try {
@@ -19,6 +20,59 @@ export async function getCart(req, res) {
   } catch (error) {
     console.error("Error in getCart controller:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+}
+
+export async function syncWebCart(req, res) {
+  try {
+    const { items } = req.body;
+    if (!Array.isArray(items)) {
+      return res.status(400).json({ message: "Cart items must be an array." });
+    }
+
+    const requestedItems = new Map();
+    for (const item of items) {
+      const productId = item?.productId;
+      const quantity = Number(item?.quantity);
+      if (
+        !mongoose.isValidObjectId(productId) ||
+        !Number.isInteger(quantity) ||
+        quantity < 1
+      ) {
+        return res.status(400).json({ message: "Cart item is invalid." });
+      }
+      requestedItems.set(productId, quantity);
+    }
+
+    let cart = await Cart.findOne({ clerkId: req.user.clerkId });
+    if (!cart) {
+      cart = new Cart({
+        user: req.user._id,
+        clerkId: req.user.clerkId,
+        items: [],
+      });
+    }
+
+    const validatedItems = [];
+    for (const [productId, quantity] of requestedItems) {
+      const product = await Product.findById(productId).select("stock");
+      if (!product) {
+        return res.status(404).json({ message: `Product ${productId} not found.` });
+      }
+      if (product.stock < quantity) {
+        return res.status(400).json({ message: "Cart quantity exceeds available stock." });
+      }
+      validatedItems.push({ product: productId, quantity });
+    }
+
+    cart.items = validatedItems;
+    await cart.save();
+    await cart.populate("items.product");
+
+    res.status(200).json({ cart });
+  } catch (error) {
+    console.error("Error in syncWebCart controller:", error);
+    res.status(500).json({ message: "Unable to save cart." });
   }
 }
 

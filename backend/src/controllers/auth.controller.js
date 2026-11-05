@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { promisify } from "node:util";
 import { User } from "../models/user.model.js";
 import { ENV } from "../config/env.js";
+import { createWebAuthToken } from "../utils/web-auth.js";
 
 const scrypt = promisify(crypto.scrypt);
 
@@ -22,10 +23,16 @@ async function verifyPassword(password, storedHash) {
 export async function register(req, res) {
   try {
     const { name, email, password } = req.body;
+    const role = req.body.role === "seller" ? "seller" : "customer";
+    const shopName = req.body.shopName?.trim();
+    const shopLocation = req.body.shopLocation?.trim();
     const normalizedEmail = email?.trim().toLowerCase();
 
     if (!name?.trim() || !normalizedEmail || !password || password.length < 6) {
       return res.status(400).json({ message: "Name, email and a password of at least 6 characters are required" });
+    }
+    if (role === "seller" && (!shopName || !shopLocation)) {
+      return res.status(400).json({ message: "Store name and location are required for seller accounts" });
     }
 
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -36,9 +43,22 @@ export async function register(req, res) {
       email: normalizedEmail,
       clerkId: `web_${crypto.randomUUID()}`,
       passwordHash: await hashPassword(password),
+      role,
+      shopName: role === "seller" ? shopName : "",
+      shopLocation: role === "seller" ? shopLocation : "",
     });
 
-    res.status(201).json({ user: { id: user._id, name: user.name, email: user.email, role: user.role } });
+    res.status(201).json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        shopName: user.shopName,
+        shopLocation: user.shopLocation,
+      },
+      token: createWebAuthToken(user._id.toString()),
+    });
   } catch (error) {
     console.error("Error registering user:", error);
     res.status(500).json({ message: "Unable to register user" });
@@ -55,7 +75,10 @@ export async function login(req, res) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    res.status(200).json({ user: { id: user._id, name: user.name, email: user.email, phone: user.phone, address: user.address, role: user.role } });
+    res.status(200).json({
+      user: { id: user._id, name: user.name, email: user.email, phone: user.phone, address: user.address, role: user.role },
+      token: createWebAuthToken(user._id.toString()),
+    });
   } catch (error) {
     console.error("Error logging in user:", error);
     res.status(500).json({ message: "Unable to log in" });

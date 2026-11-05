@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -25,6 +25,7 @@ import VoucherPanel from "./VoucherPanel";
 import AdvertisingSection from "./AdvertisingSection";
 import CheckoutPanel from "./CheckoutPanel";
 import { withSellerDetails } from "./lib/marketplace";
+import SellerDashboard from "./pages/SellerDashboard";
 
 const fallbackProducts = [
   {
@@ -285,6 +286,19 @@ const formatPrice = (price) =>
     currency: "VND",
     maximumFractionDigits: 0,
   }).format(price);
+const cartStorageKey = (email) =>
+  `net_store_cart_${email?.trim().toLowerCase() || "guest"}`;
+const loadSavedCart = (email) => {
+  try {
+    const savedCart = JSON.parse(
+      localStorage.getItem(cartStorageKey(email)) || "[]",
+    );
+    return Array.isArray(savedCart) ? savedCart : [];
+  } catch (error) {
+    console.error("Unable to restore saved cart:", error);
+    return [];
+  }
+};
 const normalizeSearch = (value) =>
   value
     .toLowerCase()
@@ -301,11 +315,17 @@ function App() {
   const [authRole, setAuthRole] = useState(
     () => localStorage.getItem("net_store_role") || "customer",
   );
+  const [authToken, setAuthToken] = useState(
+    () => localStorage.getItem("net_store_token") || "",
+  );
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({
     name: "",
     email: "",
     password: "",
+    role: "customer",
+    shopName: "",
+    shopLocation: "",
   });
   const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState(
@@ -314,7 +334,11 @@ function App() {
   const [category, setCategory] = useState("Tất cả");
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState(() => loadSavedCart(authEmail));
+  const [cartReady, setCartReady] = useState(false);
+  const [cartSyncMessage, setCartSyncMessage] = useState("");
+  const [orderError, setOrderError] = useState("");
+  const cartSaveQueue = useRef(Promise.resolve());
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
@@ -339,6 +363,121 @@ function App() {
   const [reviews, setReviews] = useState({});
   const supportMode =
     new URLSearchParams(window.location.search).get("support") === "1";
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(cartStorageKey(authEmail), JSON.stringify(cart));
+    } catch (error) {
+      console.error("Unable to save cart:", error);
+    }
+  }, [authEmail, cart]);
+
+  useEffect(() => {
+    if (authRole !== "customer" || !authToken || !authEmail) {
+      setCartReady(false);
+      if (authRole === "customer" && authEmail) {
+        setCartSyncMessage("Vui lòng đăng xuất rồi đăng nhập lại để đồng bộ giỏ hàng.");
+      }
+      return undefined;
+    }
+
+    let isMounted = true;
+    setCartReady(false);
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const headers = { Authorization: `Bearer ${authToken}` };
+
+    const synchronizeCart = async () => {
+      try {
+        const response = await fetch(`${apiUrl}/cart/web`, { headers });
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Không thể tải giỏ hàng từ máy chủ.");
+        }
+
+        const serverItems = (data.cart.items || [])
+          .filter((item) => item.product)
+          .map((item) => ({ ...item.product, quantity: item.quantity }));
+        const mergedItems = new Map(
+          serverItems.map((item) => [item._id, item]),
+        );
+        for (const item of loadSavedCart(authEmail)) {
+          const existing = mergedItems.get(item._id);
+          mergedItems.set(item._id, {
+            ...existing,
+            ...item,
+            quantity: Math.max(existing?.quantity || 0, item.quantity),
+          });
+        }
+
+        const mergedCart = [...mergedItems.values()];
+        const saveResponse = await fetch(`${apiUrl}/cart/web`, {
+          method: "PUT",
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: mergedCart.map((item) => ({
+              productId: item._id,
+              quantity: item.quantity,
+            })),
+          }),
+        });
+        const savedData = await saveResponse.json();
+        if (!saveResponse.ok) {
+          throw new Error(savedData.message || "Không thể lưu giỏ hàng lên máy chủ.");
+        }
+
+        if (isMounted) {
+          setCart(
+            (savedData.cart.items || [])
+              .filter((item) => item.product)
+              .map((item) => ({ ...item.product, quantity: item.quantity })),
+          );
+          setCartSyncMessage("");
+          setCartReady(true);
+        }
+      } catch (error) {
+        console.error("Unable to synchronize cart with MongoDB:", error);
+        if (isMounted) {
+          setCartSyncMessage(error.message);
+          setCartReady(true);
+        }
+      }
+    };
+
+    synchronizeCart();
+    return () => {
+      isMounted = false;
+    };
+  }, [authEmail, authRole, authToken]);
+
+  useEffect(() => {
+    if (authRole !== "customer" || !cartReady || !authToken || !authEmail) return;
+
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const items = cart.map((item) => ({
+      productId: item._id,
+      quantity: item.quantity,
+    }));
+    cartSaveQueue.current = cartSaveQueue.current
+      .catch(() => {})
+      .then(async () => {
+        const response = await fetch(`${apiUrl}/cart/web`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ items }),
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Không thể lưu giỏ hàng lên máy chủ.");
+        }
+      })
+      .catch((error) => {
+        console.error("Unable to save cart to MongoDB:", error);
+        setCartSyncMessage(error.message);
+      });
+  }, [authEmail, authRole, authToken, cart, cartReady]);
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
@@ -514,6 +653,46 @@ function App() {
         .filter((item) => item.quantity > 0),
     );
 
+  const submitWebOrder = async (shippingAddress) => {
+    if (!authToken) {
+      throw new Error("Phiên đăng nhập hết hạn. Vui lòng đăng xuất rồi đăng nhập lại.");
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    await cartSaveQueue.current;
+    const headers = {
+      Authorization: `Bearer ${authToken}`,
+      "Content-Type": "application/json",
+    };
+    const cartResponse = await fetch(`${apiUrl}/cart/web`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        items: cart.map((item) => ({
+          productId: item._id,
+          quantity: item.quantity,
+        })),
+      }),
+    });
+    const cartData = await cartResponse.json();
+    if (!cartResponse.ok) {
+      throw new Error(
+        cartData.message || "Không thể đồng bộ giỏ hàng trước khi đặt.",
+      );
+    }
+
+    const response = await fetch(`${apiUrl}/orders/web`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ shippingAddress }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || "Không thể tạo đơn hàng.");
+    }
+    setCart([]);
+    return data.order;
+  };
+
   const handleAuth = async (event) => {
     event.preventDefault();
     setAuthError("");
@@ -538,9 +717,12 @@ function App() {
       localStorage.setItem("net_store_user", data.user.name);
       localStorage.setItem("net_store_email", data.user.email);
       localStorage.setItem("net_store_role", data.user.role || "customer");
+      localStorage.setItem("net_store_token", data.token);
+      setCart(loadSavedCart(data.user.email));
       setAuthUser(data.user.name);
       setAuthEmail(data.user.email);
       setAuthRole(data.user.role || "customer");
+      setAuthToken(data.token);
     } catch (error) {
       setAuthError(error.message);
     }
@@ -614,7 +796,27 @@ function App() {
           localStorage.removeItem("net_store_user");
           localStorage.removeItem("net_store_email");
           localStorage.removeItem("net_store_role");
+          localStorage.removeItem("net_store_token");
           setAuthUser(null);
+          setAuthToken("");
+        }}
+      />
+    );
+  if (authRole === "seller")
+    return (
+      <SellerDashboard
+        name={authUser}
+        email={authEmail}
+        token={authToken}
+        onLogout={() => {
+          localStorage.removeItem("net_store_user");
+          localStorage.removeItem("net_store_email");
+          localStorage.removeItem("net_store_role");
+          localStorage.removeItem("net_store_token");
+          setAuthUser(null);
+          setAuthEmail("");
+          setAuthRole("customer");
+          setAuthToken("");
         }}
       />
     );
@@ -690,7 +892,9 @@ function App() {
               localStorage.removeItem("net_store_user");
               localStorage.removeItem("net_store_email");
               localStorage.removeItem("net_store_role");
+              localStorage.removeItem("net_store_token");
               setAuthUser(null);
+              setAuthToken("");
             }}
             aria-label="Đăng xuất"
           >
@@ -849,6 +1053,11 @@ function App() {
                 <X />
               </button>
             </div>
+            {cartSyncMessage && (
+              <p role="alert" className="coupon-error">
+                Chưa đồng bộ được giỏ hàng với máy chủ: {cartSyncMessage}
+              </p>
+            )}
             {cart.length === 0 ? (
               <div className="empty-cart">
                 <ShoppingBag size={42} />
@@ -961,18 +1170,30 @@ function App() {
                   Không cần thanh toán online. Bạn sẽ thanh toán khi nhận hàng.
                 </p>
                 <form
-                  onSubmit={(event) => {
+                  onSubmit={async (event) => {
                     event.preventDefault();
-                    const storageKey = `net_store_orders_${authEmail}`;
-                    const orders = JSON.parse(localStorage.getItem(storageKey) || "[]");
-                    orders.unshift({ id: `NET-${Date.now()}`, items: cart, total: finalTotal, status: "pending", createdAt: new Date().toISOString() });
-                    localStorage.setItem(storageKey, JSON.stringify(orders));
-                    setOrdered(true);
+                    setOrderError("");
+                    const [fullName, phoneNumber, streetAddress] = Array.from(
+                      event.currentTarget.querySelectorAll("input, textarea"),
+                      (input) => input.value.trim(),
+                    );
+                    try {
+                      await submitWebOrder({
+                        fullName,
+                        phoneNumber,
+                        streetAddress,
+                        city: "Chưa cung cấp",
+                      });
+                      setOrdered(true);
+                    } catch (error) {
+                      setOrderError(error.message);
+                    }
                   }}
                 >
                   <input required placeholder="Họ và tên" />
                   <input required type="tel" placeholder="Số điện thoại" />
                   <textarea required placeholder="Địa chỉ nhận hàng" rows="3" />
+                  {orderError && <p className="coupon-error" role="alert">{orderError}</p>}
                   <button className="checkout-button" type="submit">
                     Xác nhận đặt hàng <ArrowRight size={18} />
                   </button>
@@ -1217,7 +1438,7 @@ function App() {
       )}
       {checkoutOpen && !ordered && (
         <div className="checkout-overlay">
-          <CheckoutPanel cart={cart} total={finalTotal} discount={discount} email={authEmail} onBack={() => setCheckoutOpen(false)} onComplete={() => setOrdered(true)} />
+          <CheckoutPanel cart={cart} total={finalTotal} discount={discount} onBack={() => setCheckoutOpen(false)} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
         </div>
       )}
       {checkoutOpen && ordered && (
@@ -1282,7 +1503,7 @@ function App() {
               ) : accountTab === "password" ? (
                 <PasswordPanel email={authEmail} />
               ) : accountTab === "orders" ? (
-                <OrdersPanel email={authEmail} />
+                <OrdersPanel email={authEmail} authToken={authToken} />
               ) : accountTab === "vouchers" ? (
                 <VoucherPanel email={authEmail} />
               ) : (
@@ -1492,6 +1713,46 @@ function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
                   placeholder="Nguyễn Văn An"
                 />
               </label>
+            )}
+            {isRegister && (
+              <label>
+                Loại tài khoản
+                <select
+                  value={form.role || "customer"}
+                  onChange={(event) =>
+                    setForm({ ...form, role: event.target.value })
+                  }
+                >
+                  <option value="customer">Khách hàng</option>
+                  <option value="seller">Người bán</option>
+                </select>
+              </label>
+            )}
+            {isRegister && form.role === "seller" && (
+              <>
+                <label>
+                  Tên gian hàng
+                  <input
+                    required
+                    value={form.shopName || ""}
+                    onChange={(event) =>
+                      setForm({ ...form, shopName: event.target.value })
+                    }
+                    placeholder="Nhà May Handmade"
+                  />
+                </label>
+                <label>
+                  Địa chỉ gian hàng
+                  <input
+                    required
+                    value={form.shopLocation || ""}
+                    onChange={(event) =>
+                      setForm({ ...form, shopLocation: event.target.value })
+                    }
+                    placeholder="Hà Nội"
+                  />
+                </label>
+              </>
             )}
             <label>
               Email

@@ -1,6 +1,73 @@
+import mongoose from "mongoose";
 import { Order } from "../models/order.model.js";
 import { Product } from "../models/product.model.js";
 import { Review } from "../models/review.model.js";
+
+export async function createWebReview(req, res) {
+  try {
+    const { productId, orderId, rating, text } = req.body;
+    const numericRating = Number(rating);
+    if (
+      !mongoose.isValidObjectId(productId) ||
+      !mongoose.isValidObjectId(orderId) ||
+      !Number.isInteger(numericRating) ||
+      numericRating < 1 ||
+      numericRating > 5 ||
+      typeof text !== "string" ||
+      !text.trim()
+    ) {
+      return res.status(400).json({ message: "Vui lòng chọn số sao và nhập nội dung đánh giá." });
+    }
+
+    const order = await Order.findOne({ _id: orderId, user: req.user._id });
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
+    }
+    if (!["completed", "delivered"].includes(order.status)) {
+      return res.status(400).json({ message: "Chỉ có thể đánh giá đơn hàng đã hoàn thành." });
+    }
+
+    const orderedItem = order.orderItems.find(
+      (item) => item.product.toString() === productId,
+    );
+    if (!orderedItem) {
+      return res.status(400).json({ message: "Sản phẩm không có trong đơn hàng này." });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm để đánh giá." });
+    }
+
+    const review = await Review.findOneAndUpdate(
+      { productId, userId: req.user._id },
+      {
+        productId,
+        userId: req.user._id,
+        orderId,
+        rating: numericRating,
+        text: text.trim(),
+      },
+      { new: true, upsert: true, runValidators: true },
+    );
+    const ratings = await Review.find({ productId }).select("rating");
+    product.averageRating =
+      ratings.reduce((sum, entry) => sum + entry.rating, 0) / ratings.length;
+    product.totalReviews = ratings.length;
+    await product.save();
+
+    res.status(201).json({
+      message: "Đánh giá đã được lưu.",
+      review: {
+        ...review.toObject(),
+        name: req.user.name,
+      },
+    });
+  } catch (error) {
+    console.error("Error in createWebReview controller:", error);
+    res.status(500).json({ message: "Không thể lưu đánh giá." });
+  }
+}
 
 export async function createReview(req, res) {
   try {
