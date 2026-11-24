@@ -31,6 +31,8 @@ import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
 import StoreHeader from "./components/StoreHeader";
 import StoreCatalog from "./components/StoreCatalog";
+import Recommendations from "./components/Recommendations";
+import { complementaryProducts, historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
 
 
 const coupons = {
@@ -97,6 +99,9 @@ function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [viewHistory, setViewHistory] = useState(() => readViewHistory(localStorage));
+  useEffect(() => { try { localStorage.setItem(historyKey, JSON.stringify(viewHistory)); } catch { /* Browsing works when storage is disabled. */ } }, [viewHistory]);
+  const viewProduct = product => { setViewHistory(history => recordProductView(history, product)); setSelectedProduct(product); };
   const [sellerShop, setSellerShop] = useState(null);
   const [profileOpen, setProfileOpen] = useState(() => location.pathname === "/orders" && Boolean(authToken));
   const [accountTab, setAccountTab] = useState(location.pathname === "/orders" ? "orders" : "profile");
@@ -569,7 +574,8 @@ function App() {
         setAuthUser(null); setAuthToken("");
       }} />
       <main id="top">
-        <StoreCatalog products={products} category={category} onCategory={setCategory} search={search} onSearch={setSearch} tab={catalogTab} onTab={setCatalogTab} onView={setSelectedProduct} onAdd={addToCart} onShop={setSellerShop} />
+        <StoreCatalog products={products} category={category} onCategory={setCategory} search={search} onSearch={setSearch} tab={catalogTab} onTab={setCatalogTab} onView={viewProduct} onAdd={addToCart} onShop={setSellerShop} />
+        <Recommendations products={products} history={viewHistory} currentProduct={selectedProduct} onView={viewProduct} onAdd={addToCart} />
         <section className="story" id="story">
           <div className="story-image">
             <img
@@ -651,6 +657,7 @@ function App() {
                     </div>
                   ))}
                 </div>
+                <section className="cart-complements"><h3>Mua kèm thường được chọn</h3>{complementaryProducts(products, cart).map(product => <div className="cart-complement" key={product._id}><ProductImage product={product} /><div><button type="button" onClick={() => { setCartOpen(false); viewProduct(product); }}>{product.name}</button><strong>{formatPrice(product.price)}</strong></div><button type="button" className="secondary-button" onClick={() => addToCart(product)} aria-label={`Thêm ${product.name} vào giỏ`}>+ Thêm</button></div>)}</section>
                 <div className="coupon-box">
                   <div>
                     <input
@@ -909,7 +916,7 @@ function App() {
                       key={product._id}
                       onClick={() => {
                         setSellerShop(null);
-                        setSelectedProduct(product);
+                        viewProduct(product);
                       }}
                     >
                       <div className="product-image">
