@@ -32,14 +32,12 @@ import ProductImage from "./components/ProductImage";
 import StoreHeader from "./components/StoreHeader";
 import StoreCatalog from "./components/StoreCatalog";
 import Recommendations from "./components/Recommendations";
-import { complementaryProducts, historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
+import { historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
+import CartDrawer, { CartPage } from "./components/CartDrawer";
+import { coupons } from "./lib/storeConfig";
+import { couponDiscount } from "./lib/cartPricing";
 
 
-const coupons = {
-  NET10: { type: "percent", value: 10, label: "Giảm 10%" },
-  WELCOME50: { type: "fixed", value: 50000, label: "Giảm 50.000đ" },
-  FREESHIP: { type: "fixed", value: 30000, label: "Giảm 30.000đ" },
-};
 const demoFallbackProducts = fallbackProducts.map(decorateProduct);
 
 const cartStorageKey = (email) =>
@@ -96,6 +94,7 @@ function App() {
   const [cartSyncMessage, setCartSyncMessage] = useState("");
   const cartSaveQueue = useRef(Promise.resolve());
   const [cartOpen, setCartOpen] = useState(false);
+  const [cartPageOpen, setCartPageOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -310,20 +309,17 @@ function App() {
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-  const discount = appliedCoupon
-    ? appliedCoupon.type === "percent"
-      ? Math.round((cartTotal * appliedCoupon.value) / 100)
-      : Math.min(appliedCoupon.value, cartTotal)
-    : 0;
+  const discount = couponDiscount(cartTotal, appliedCoupon);
   const finalTotal = Math.max(0, cartTotal - discount);
 
-  const applyCoupon = () => {
-    const code = couponInput.trim().toUpperCase();
+  const applyCoupon = (input = couponInput) => {
+    const code = input.trim().toUpperCase();
     if (!coupons[code]) {
       setAppliedCoupon(null);
       setCouponMessage("Mã không hợp lệ. Thử NET10, WELCOME50 hoặc FREESHIP.");
       return;
     }
+    setCouponInput(code);
     setAppliedCoupon(coupons[code]);
     setCouponMessage(`${coupons[code].label} đã được áp dụng.`);
   };
@@ -567,6 +563,11 @@ function App() {
       />
     );
 
+  const cartProps = { cart, products, onQuantity: changeQuantity, onRemove: id => setCart(items => items.filter(item => item._id !== id)), onAdd: addToCart,
+    onView: product => { setCartOpen(false); setCartPageOpen(false); viewProduct(product); },
+    onCheckout: () => { setCartOpen(false); setCartPageOpen(false); setCheckoutOpen(true); },
+    coupon: appliedCoupon, couponCode: Object.keys(coupons).find(code => coupons[code] === appliedCoupon), couponInput, onCouponInput: setCouponInput,
+    onApplyCoupon: applyCoupon, couponMessage, syncMessage: cartSyncMessage };
   return (
     <div className="storefront">
       <StoreHeader user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onSale={() => { setCategory("Tất cả"); setSearch(""); setCatalogTab("sale"); }} onLogout={() => {
@@ -610,101 +611,8 @@ function App() {
         <p>Đồ dùng tử tế cho nhịp sống hiện đại.</p>
         <span>© 2026 NET</span>
       </footer>
-      {cartOpen && (
-        <div className="overlay" onClick={() => setCartOpen(false)}>
-          <aside
-            className="cart-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">GIỎ HÀNG CỦA BẠN</p>
-                <h2>{cartCount} sản phẩm</h2>
-              </div>
-              <button onClick={() => setCartOpen(false)} aria-label="Đóng">
-                <X />
-              </button>
-            </div>
-            {cartSyncMessage && (
-              <p role="alert" className="coupon-error">
-                Chưa đồng bộ được giỏ hàng với máy chủ: {cartSyncMessage}
-              </p>
-            )}
-            {cart.length === 0 ? (
-              <div className="empty-cart">
-                <ShoppingBag size={42} />
-                <p>Giỏ hàng đang trống.</p>
-              </div>
-            ) : (
-              <>
-                <div className="cart-items">
-                  {cart.map((item) => (
-                    <div className="cart-item" key={item._id}>
-                      <ProductImage product={item} />
-                      <div>
-                        <h3>{item.name}</h3>
-                        <strong>{formatPrice(item.price)}</strong>
-                        <div className="quantity">
-                          <button onClick={() => changeQuantity(item._id, -1)}>
-                            <Minus size={14} />
-                          </button>
-                          <span>{item.quantity}</span>
-                          <button onClick={() => changeQuantity(item._id, 1)}>
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <section className="cart-complements"><h3>Mua kèm thường được chọn</h3>{complementaryProducts(products, cart).map(product => <div className="cart-complement" key={product._id}><ProductImage product={product} /><div><button type="button" onClick={() => { setCartOpen(false); viewProduct(product); }}>{product.name}</button><strong>{formatPrice(product.price)}</strong></div><button type="button" className="secondary-button" onClick={() => addToCart(product)} aria-label={`Thêm ${product.name} vào giỏ`}>+ Thêm</button></div>)}</section>
-                <div className="coupon-box">
-                  <div>
-                    <input
-                      value={couponInput}
-                      onChange={(event) => setCouponInput(event.target.value)}
-                      placeholder="Mã giảm giá"
-                    />
-                    <button onClick={applyCoupon}>Áp dụng</button>
-                  </div>
-                  {couponMessage && (
-                    <small
-                      className={
-                        appliedCoupon ? "coupon-success" : "coupon-error"
-                      }
-                    >
-                      {couponMessage}
-                    </small>
-                  )}
-                </div>
-                <div className="cart-total">
-                  <span>Tạm tính</span>
-                  <strong>{formatPrice(cartTotal)}</strong>
-                </div>
-                {discount > 0 && (
-                  <div className="cart-total discount-row">
-                    <span>Giảm giá</span>
-                    <strong>-{formatPrice(discount)}</strong>
-                  </div>
-                )}
-                <div className="cart-total final-row">
-                  <span>Tổng cộng</span>
-                  <strong>{formatPrice(finalTotal)}</strong>
-                </div>
-                <button
-                  className="checkout-button"
-                  onClick={() => {
-                    setCartOpen(false);
-                    setCheckoutOpen(true);
-                  }}
-                >
-                  Đặt hàng <ArrowRight size={18} />
-                </button>
-              </>
-            )}
-          </aside>
-        </div>
-      )}
+      {cartOpen && <CartDrawer {...cartProps} onClose={() => setCartOpen(false)} onViewCart={() => { setCartOpen(false); setCartPageOpen(true); }} />}
+      {cartPageOpen && <CartPage {...cartProps} onClose={() => setCartPageOpen(false)} />}
 
       {selectedProduct && (
         <div className="overlay" onClick={() => setSelectedProduct(null)}>
