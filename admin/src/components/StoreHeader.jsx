@@ -5,6 +5,15 @@ import { storeCategories } from "../lib/storeConfig";
 
 export default function StoreHeader({ user, search, onSearch, searchFocused, onSearchFocus, suggestions, category, onCategory, cartCount, onCart, onProfile, onOrders, onLogout, onSale }) {
   const account = useRef(null);
+  const header = useRef(null);
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      document.documentElement.style.setProperty("--header-offset", `${Math.ceil(header.current.getBoundingClientRect().height) + 16}px`);
+    });
+    observer.observe(header.current);
+    return () => { observer.disconnect(); document.documentElement.style.removeProperty("--header-offset"); };
+  }, []);
   useEffect(() => {
     const close = event => {
       if (event.key === "Escape" || (event.type === "pointerdown" && !account.current?.contains(event.target))) {
@@ -17,13 +26,13 @@ export default function StoreHeader({ user, search, onSearch, searchFocused, onS
   }, []);
   const browse = () => document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" });
   const choose = action => { account.current.open = false; action(); };
-  return <header className="topbar store-header">
+  return <header ref={header} className="topbar store-header">
     <div className="store-header-main">
       <a className="brand" href="#top" aria-label="Net Store — Trang chủ"><img className="brand-logo" src="/net-store-logo.png" alt="" /><span>NET STORE</span></a>
       <form className="header-search" role="search" onSubmit={event => { event.preventDefault(); onSearchFocus(false); browse(); }}>
         <label className="sr-only" htmlFor="store-search">Tìm sản phẩm, thương hiệu, shop</label>
         <Search size={18} aria-hidden="true" />
-        <input id="store-search" autoComplete="off" value={search} placeholder="Tìm sản phẩm, thương hiệu, shop..." onFocus={() => onSearchFocus(true)} onChange={event => { onSearch(event.target.value); onSearchFocus(true); }} onBlur={() => setTimeout(() => onSearchFocus(false), 150)} />
+        <input id="store-search" autoComplete="off" value={search} placeholder="Tìm sản phẩm, thương hiệu, shop..." onFocus={() => onSearchFocus(true)} onChange={event => { onSearch(event.target.value); onSearchFocus(true); }} onBlur={event => { if (!event.currentTarget.form?.contains(event.relatedTarget)) onSearchFocus(false); }} />
         <button type="submit" className="primary-button">Tìm</button>
         {searchFocused && search.trim() && <div className="search-suggestions" aria-label="Gợi ý tìm kiếm">
           {suggestions.length ? suggestions.map(product => <button type="button" key={product._id} onClick={() => { onSearch(product.name); onSearchFocus(false); browse(); }}><ProductImage product={product} /><span>{product.name}</span><small>{product.category}</small></button>) : <p>Không tìm thấy sản phẩm phù hợp.</p>}

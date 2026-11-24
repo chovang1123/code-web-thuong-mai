@@ -1,16 +1,22 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
+import { addressErrors, isValidAddress } from "./lib/checkout";
 
 const blank = { fullName: "", phoneNumber: "", state: "", city: "", streetAddress: "", zipCode: "" };
 
 function AddressFields({ value, onChange, disabled }) {
+  const prefix = useId();
+  const [touched, setTouched] = useState({});
+  const errors = addressErrors(value);
   const field = (name) => (event) => onChange({ ...value, [name]: event.target.value });
+  const props = name => ({ onBlur: () => setTouched(current => ({ ...current, [name]: true })), "aria-invalid": touched[name] && !!errors[name], "aria-describedby": touched[name] && errors[name] ? `${prefix}-${name}` : undefined });
+  const error = name => touched[name] && errors[name] && <small className="field-error" id={`${prefix}-${name}`}>{errors[name]}</small>;
   return <div className="checkout-fields">
-    <label>Họ và tên<input required autoComplete="name" value={value.fullName} disabled={disabled} onChange={field("fullName")} /></label>
-    <label>Số điện thoại<input required type="tel" autoComplete="tel" value={value.phoneNumber} disabled={disabled} onChange={field("phoneNumber")} /></label>
-    <label>Tỉnh/Thành phố<input required value={value.state} disabled={disabled} onChange={field("state")} /></label>
-    <label>Quận/Huyện<input required value={value.city} disabled={disabled} onChange={field("city")} /></label>
-    <label className="checkout-street">Địa chỉ cụ thể<textarea required autoComplete="street-address" rows="2" value={value.streetAddress} disabled={disabled} onChange={field("streetAddress")} /></label>
+    <label>Họ và tên<input {...props("fullName")} required minLength="2" maxLength="100" autoComplete="name" value={value.fullName} disabled={disabled} onChange={field("fullName")} placeholder="Họ và tên người nhận" />{error("fullName")}</label>
+    <label>Số điện thoại<input {...props("phoneNumber")} required type="tel" maxLength="20" autoComplete="tel" value={value.phoneNumber} disabled={disabled} onChange={field("phoneNumber")} placeholder="0912345678" />{error("phoneNumber")}</label>
+    <label>Tỉnh/Thành phố<input {...props("state")} required maxLength="100" autoComplete="address-level1" value={value.state} disabled={disabled} onChange={field("state")} placeholder="Tỉnh / Thành phố" />{error("state")}</label>
+    <label>Quận/Huyện<input {...props("city")} required maxLength="100" autoComplete="address-level2" value={value.city} disabled={disabled} onChange={field("city")} placeholder="Quận / Huyện" />{error("city")}</label>
+    <label className="checkout-street">Địa chỉ cụ thể<textarea {...props("streetAddress")} required minLength="5" maxLength="250" autoComplete="street-address" rows="2" value={value.streetAddress} disabled={disabled} onChange={field("streetAddress")} placeholder="Số nhà, tên đường" />{error("streetAddress")}</label>
   </div>;
 }
 
@@ -50,11 +56,14 @@ export default function CheckoutAddress({ authToken, onChange, disabled }) {
   }, [api, authToken, reload]);
 
   useEffect(() => {
-    onChange(!loading && !saving ? mode === "temporary" ? temporary : !editing ? selected || null : null : null);
+    const candidate = mode === "temporary" ? temporary : !editing ? selected : null;
+    onChange(!loading && !saving && isValidAddress(candidate) ? candidate : null);
   }, [onChange, loading, saving, mode, temporary, editing, selected]);
 
   async function save() {
     if (saving || disabled) return;
+    const validation = addressErrors(fixed);
+    if (Object.keys(validation).length) { setError(Object.values(validation)[0]); return; }
     const inputs = [...fields.current.querySelectorAll("input, textarea")];
     if (!inputs.every(input => input.reportValidity())) return;
     if (inputs.some(input => !input.value.trim())) {

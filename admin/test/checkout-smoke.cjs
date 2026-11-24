@@ -15,9 +15,10 @@ async function until(predicate) {
   throw Error("Timed out waiting for storefront");
 }
 
+for (const couponCode of [null, "NET10"]) {
 for (const method of ["cod", "VNBANK", "INTCARD"]) {
   for (const addressMode of ["saved", "new", "temporary"]) {
-  test("storefront checkout via " + method + " address " + addressMode, async t => {
+  test("storefront checkout via " + method + " address " + addressMode + " coupon " + (couponCode || "none"), async t => {
     const dist = path.resolve(__dirname, "../dist");
     const asset = fs.readFileSync(path.join(dist, "index.html"), "utf8").match(/src="\/([^"]+\.js)"/)[1];
     const dom = new JSDOM('<main id="root"></main>', { url: "https://shop.test", runScripts: "outside-only",
@@ -64,7 +65,12 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
     w.eval(fs.readFileSync(path.join(dist, asset), "utf8"));
     const element = selector => d.querySelector(selector);
     (await until(() => element('[aria-label="Mở giỏ hàng"]'))).click();
-    (await until(() => element(".cart-total") && element(".checkout-button"))).click();
+    await until(() => element(".cart-total"));
+    if (couponCode) {
+      [...d.querySelectorAll('.voucher-chips button')].find(button => button.textContent.startsWith(couponCode)).click();
+      await until(() => element('.voucher-chips .is-applied'));
+    }
+    element(".checkout-button").click();
     await until(() => element(".checkout-content"));
     assert.equal(element('input[value="VNPAYQR"]'), null);
     if (addressMode === "saved") {
@@ -79,7 +85,7 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
       await until(() => element(".checkout-fields input"));
       for (const input of d.querySelectorAll(".checkout-fields input, .checkout-fields textarea")) {
         const prototype = input.tagName === "TEXTAREA" ? w.HTMLTextAreaElement.prototype : w.HTMLInputElement.prototype;
-        Object.getOwnPropertyDescriptor(prototype, "value").set.call(input, "123 Test");
+        Object.getOwnPropertyDescriptor(prototype, "value").set.call(input, input.type === "tel" ? "0912345678" : "123 Test");
         input.dispatchEvent(new w.Event("input", { bubbles: true }));
       }
       if (addressMode === "new") {
@@ -90,25 +96,28 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
         // Mở lại checkout phải lấy địa chỉ vừa lưu, không yêu cầu nhập lần nữa.
         element('.checkout-header button').click();
         await until(() => !element('.checkout-content'));
-        element('[aria-label="Mở giỏ hàng"]').click();
-        (await until(() => element('.cart-total') && element('.checkout-button'))).click();
+        (await until(() => element('.cart-page-overlay .checkout-button'))).click();
         await until(() => element('.checkout-saved-address'));
         assert.equal(d.querySelectorAll('.checkout-fields input').length, 0);
 
       }
     }
-    await until(() => !element(".checkout-bottom button").disabled);
+    await until(() => !element(".place-order-button").disabled);
     element('input[value="' + method + '"]').click();
     await wait(10);
-    element(".checkout-bottom button").click();
+    element(".place-order-button").click();
     await until(() => method === "cod" ? element(".success") : starts);
     assert.equal(submitted.length, 1);
     assert.equal(submitted[0].paymentMethod, method === "cod" ? "cod" : "vnpay");
     assert.equal(submitted[0].shippingAddress.fullName, addressMode === "saved" ? "Home Customer" : "123 Test");
-    assert.equal(submitted[0].expectedTotal, 10000);
+    assert.equal(submitted[0].expectedTotal, couponCode && method !== "cod" ? 9000 : 10000);
+    assert.equal(submitted[0].couponCode, method !== "cod" ? couponCode || undefined : undefined);
+    assert.equal(d.querySelectorAll('.checkout-bottom').length, 0);
     assert.equal(starts, method === "cod" ? 0 : 1);
     if (addressMode === "temporary") { assert.equal(saves, 0); assert.equal(savedAddresses[1].fullName, "Home Customer"); }
   });
+}
+
 }
 
 }

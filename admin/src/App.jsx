@@ -2,14 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
-  CircleHelp,
   LogIn,
-  LogOut,
   MessageCircle,
-  Minus,
-  Plus,
-  Search,
-  ShoppingBag,
   Star,
   Store,
   UserPlus,
@@ -26,7 +20,7 @@ import AdvertisingSection from "./AdvertisingSection";
 import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
 import { fallbackProducts } from "./lib/catalog";
-import { decorateProduct, formatPrice } from "./lib/products";
+import { decorateProduct, formatPrice, productRating } from "./lib/products";
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
 import StoreHeader from "./components/StoreHeader";
@@ -34,8 +28,9 @@ import StoreCatalog from "./components/StoreCatalog";
 import Recommendations from "./components/Recommendations";
 import { historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
 import CartDrawer, { CartPage } from "./components/CartDrawer";
+import Dialog from "./components/Dialog";
 import { coupons } from "./lib/storeConfig";
-import { couponDiscount } from "./lib/cartPricing";
+import { checkoutTotals } from "./lib/cartPricing";
 
 
 const demoFallbackProducts = fallbackProducts.map(decorateProduct);
@@ -309,8 +304,6 @@ function App() {
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-  const discount = couponDiscount(cartTotal, appliedCoupon);
-  const finalTotal = Math.max(0, cartTotal - discount);
 
   const applyCoupon = (input = couponInput) => {
     const code = input.trim().toUpperCase();
@@ -422,9 +415,9 @@ function App() {
     const response = await fetch(`${apiUrl}/orders/web`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ shippingAddress, paymentMethod, checkoutReference, bankCode, expectedTotal: finalTotal,
+      body: JSON.stringify({ shippingAddress, paymentMethod, checkoutReference, bankCode, expectedTotal: checkoutTotals(cartTotal, appliedCoupon, paymentMethod).total,
         expectedItems: cart.map(item => ({ product: item._id, quantity: item.quantity })),
-        couponCode: Object.keys(coupons).find(code => coupons[code] === appliedCoupon) }),
+        couponCode: paymentMethod === "vnpay" ? Object.keys(coupons).find(code => coupons[code] === appliedCoupon) : undefined }),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -585,7 +578,7 @@ function App() {
             />
           </div>
           <div className="story-copy">
-            <p className="eyebrow">NET / PHILOSOPHY</p>
+            <p className="eyebrow">NET / TRIẾT LÝ</p>
             <h2>
               Mua ít hơn.
               <br />
@@ -622,14 +615,15 @@ function App() {
           >
             <button
               className="modal-close"
+              aria-label="Đóng chi tiết sản phẩm"
               onClick={() => setSelectedProduct(null)}
             >
               <X />
             </button>
             <div className="detail-image">
-              <span className="sale-badge">
+              {selectedProduct.discountPercent > 0 && <span className="sale-badge">
                 -{selectedProduct.discountPercent}%
-              </span>
+              </span>}
               <ProductImage product={selectedProduct} />
             </div>
             <div className="detail-content">
@@ -639,20 +633,17 @@ function App() {
               <h2>{selectedProduct.name}</h2>
               <p className="detail-brand">Thương hiệu: {selectedProduct.brand}</p>
               <div className="detail-rating">
-                <span>★ 4.9</span>
-                <span>{selectedProduct.sold}+ đã bán</span>
-                <span>Đã kiểm chứng</span>
+                <span>{productRating(selectedProduct) > 0 ? `★ ${productRating(selectedProduct).toFixed(1)}` : "Chưa có đánh giá"}</span>
+                <span>{selectedProduct.sold > 0 ? `${selectedProduct.sold} đã bán` : "Chưa có lượt bán"}</span>
               </div>
               <div className="detail-price">
                 <strong>{formatPrice(selectedProduct.price)}</strong>
-                <del>{formatPrice(selectedProduct.originalPrice)}</del>
-                <b>Giảm {selectedProduct.discountPercent}%</b>
+                {selectedProduct.discountPercent > 0 && <><del>{formatPrice(selectedProduct.originalPrice)}</del><b>Giảm {selectedProduct.discountPercent}%</b></>}
               </div>
               <div className="voucher-list">
                 <p>Voucher của shop</p>
-                <span>Giảm {selectedProduct.discountPercent}%</span>
-                <span>Miễn phí vận chuyển</span>
-                <span>Hoàn xu 5%</span>
+                <span>NET10 · Giảm 10% qua VNPay</span>
+                <span>WELCOME50 · Giảm 50.000đ qua VNPay</span>
               </div>
               <p className="detail-description">
                 {selectedProduct.description}
@@ -845,9 +836,9 @@ function App() {
         </div>
       )}
       {checkoutOpen && !ordered && (
-        <div className="checkout-overlay">
-          <CheckoutPanel authToken={authToken} cart={cart} total={finalTotal} discount={discount} onBack={() => setCheckoutOpen(false)} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
-        </div>
+        <Dialog label="Thanh toán" className="checkout-overlay checkout-dialog" onClose={() => setCheckoutOpen(false)}>
+          <CheckoutPanel authToken={authToken} authEmail={authEmail} cart={cart} coupon={appliedCoupon} couponCode={cartProps.couponCode} couponInput={couponInput} onCouponInput={setCouponInput} onApplyCoupon={applyCoupon} couponMessage={couponMessage} onBack={() => { setCheckoutOpen(false); setCartPageOpen(true); }} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
+        </Dialog>
       )}
       {checkoutOpen && ordered && (
         <div className="overlay">

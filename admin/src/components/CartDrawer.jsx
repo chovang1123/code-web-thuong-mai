@@ -31,5 +31,5 @@ export default function CartDrawer(props) {
 }
 
 export function CartPage(props) {
-  return <div className="cart-page-overlay"><header className="cart-page-header"><a className="brand" href="#shop" onClick={event => { event.preventDefault(); props.onClose(); }}><img src="/net-store-logo.png" alt="" className="brand-logo" /><span>NET STORE</span></a><nav className="checkout-steps" aria-label="Tiến trình đặt hàng"><strong aria-current="step">Giỏ hàng</strong><span aria-hidden="true">›</span><span>Thanh toán</span><span aria-hidden="true">›</span><span>Hoàn tất</span></nav></header><main className="cart-page-main"><CartContents {...props} fullPage /></main></div>;
+  return <Dialog label="Xem giỏ hàng" className="cart-page-overlay cart-page-dialog" onClose={props.onClose}><header className="cart-page-header"><a className="brand" href="#shop" onClick={event => { event.preventDefault(); props.onClose(); }}><img src="/net-store-logo.png" alt="" className="brand-logo" /><span>NET STORE</span></a><nav className="checkout-steps" aria-label="Tiến trình đặt hàng"><strong aria-current="step">Giỏ hàng</strong><span aria-hidden="true">›</span><span>Thanh toán</span><span aria-hidden="true">›</span><span>Hoàn tất</span></nav></header><main className="cart-page-main"><CartContents {...props} fullPage /></main></Dialog>;
 }

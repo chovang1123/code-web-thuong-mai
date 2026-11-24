@@ -9,7 +9,7 @@ export default function ProductCard({ product, onView, onAdd, onShop, compact = 
   return <article className={`product-card catalog-card ${compact ? "compact-card" : ""}`}>
     <div className="product-image">
       <button type="button" className="product-image-link" onClick={() => onView(product)} aria-label={`Xem ${product.name}`}><ProductImage product={product} /></button>
-      {onAdd && <button type="button" className="add-button" onClick={() => onAdd(product)} aria-label={`Thêm ${product.name} vào giỏ`}><Plus size={18} /><span>Thêm giỏ</span></button>}
+      {onAdd && <button type="button" className="add-button" disabled={product.stock === 0} onClick={() => onAdd(product)} aria-label={`Thêm ${product.name} vào giỏ`}><Plus size={18} /><span>{product.stock === 0 ? "Hết hàng" : "Thêm giỏ"}</span></button>}
     </div>
     <div className="product-info">
       <span className="product-category-tag">{product.category}</span>
