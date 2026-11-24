@@ -1,0 +1,19 @@
+:root {
+  --color-primary: #17453a;
+  --color-background: #f6f2ea;
+  --color-accent: #a94a22;
+  --color-border: #e4ddd0;
+  --color-muted: #5c5a55;
+  --color-tag: #e3ece6;
+  --color-placeholder: #dfe8e2;
+  --color-surface: #ffffff;
+  --color-text: #243c33;
+  --color-overlay: rgb(23 69 58 / 32%);
+  --color-shadow: rgb(23 69 58 / 10%);
+  --font-body: 'DM Sans', sans-serif;
+  --font-heading: 'Playfair Display', serif;
+  --radius-button: 4px;
+  --radius-card: 8px;
+  --page-width: 1440px;
+  --header-offset: 130px;
+}

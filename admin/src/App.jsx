@@ -28,6 +28,7 @@ import CheckoutPanel from "./CheckoutPanel";
 import { withSellerDetails } from "./lib/marketplace";
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
+import StoreHeader from "./components/StoreHeader";
 
 const fallbackProducts = [
   {
@@ -829,93 +830,10 @@ function App() {
 
   return (
     <div className="storefront">
-      <header className="topbar">
-        <a className="brand" href="#top">
-          <span className="brand-mark">N</span>
-          <span>NET STORE</span>
-        </a>
-        <nav>
-          <a href="#shop">Cửa hàng</a>
-        </nav>
-        <div className="header-actions">
-          <div className="search-box">
-            <Search size={18} />
-            <input
-              value={search}
-              onFocus={() => setSearchFocused(true)}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setSearchFocused(true);
-              }}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-              placeholder="Tìm sản phẩm"
-            />
-            {searchFocused && search.trim() && (
-              <div className="search-suggestions">
-                {suggestions.length ? (
-                  suggestions.map((product) => (
-                    <button
-                      key={product._id}
-                      onMouseDown={() => {
-                        setSearch(product.name);
-                        setSearchFocused(false);
-                        document
-                          .getElementById("shop")
-                          ?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                    >
-                      <ProductImage product={product} />
-                      <span>{product.name}</span>
-                      <small>{product.category}</small>
-                    </button>
-                  ))
-                ) : (
-                  <p>Không có sản phẩm bắt đầu bằng “{search}”.</p>
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            className="support-button"
-            onClick={() =>
-              window.open(
-                `${window.location.origin}/?support=1`,
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
-          >
-            <CircleHelp size={17} />
-            <span>Hỗ Trợ</span>
-          </button>
-          <button className="profile-trigger" onClick={openProfile}>
-            <UserRound size={17} />
-            <span>{authUser}</span>
-          </button>
-          <button
-            className="logout-button"
-            onClick={() => {
-              localStorage.removeItem("net_store_user");
-              localStorage.removeItem("net_store_email");
-              localStorage.removeItem("net_store_role");
-              localStorage.removeItem("net_store_token");
-              setAuthUser(null);
-              setAuthToken("");
-            }}
-            aria-label="Đăng xuất"
-          >
-            <LogOut size={18} />
-          </button>
-          <button
-            className="cart-button"
-            onClick={() => setCartOpen(true)}
-            aria-label="Mở giỏ hàng"
-          >
-            <ShoppingBag size={20} />
-            <span>{cartCount}</span>
-          </button>
-        </div>
-      </header>
+      <StoreHeader user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onSale={() => { setCategory("Tất cả"); setSearch(""); }} onLogout={() => {
+        ["user", "email", "role", "token"].forEach(key => localStorage.removeItem("net_store_" + key));
+        setAuthUser(null); setAuthToken("");
+      }} />
       <main id="top">
         <AdvertisingSection onShopClick={() => document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" })} />
         <section className="shop-section" id="shop">
