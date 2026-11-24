@@ -39,7 +39,15 @@ export interface ShippingAddress {
   city: string;
 }
 
+export type PaymentMethod = 'cod' | 'vnpay';
+
 export interface Order {
+  paymentMethod?: PaymentMethod;
+  paymentChannel?: string;
+  orderStatus?: string;
+  paymentStatus?: string;
+  expiresAt?: string;
+  paymentResult?: { status?: string };
   _id: string;
   createdAt: string;
   status: string;

@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
+import { Linking } from 'react-native';
 import ProductsScreen from '../src/app/(tabs)/index';
 import CartScreen from '../src/app/(tabs)/cart';
 import OrdersScreen from '../src/app/(tabs)/orders';
@@ -41,7 +42,16 @@ function harness(authenticated = true, initialQuantity = 1) {
     } else if (url.endsWith('/orders/web') && options?.method === 'POST') {
       const order: Order = { _id: 'order0001', status: 'pending', createdAt: new Date().toISOString(), totalPrice: 150000, shippingAddress: body.shippingAddress,
         orderItems: [{ name: product.name, price: product.price, quantity: 1 }] };
+      if (body.paymentMethod) {
+        order.paymentMethod = body.paymentMethod;
+        order.paymentChannel = body.bankCode;
+        order.orderStatus = "pending";
+        order.expiresAt = new Date(Date.now() + 900000).toISOString();
+        order.paymentResult = { status: 'pending' };
+      }
       orders.push(order); cart = { items: [] }; status = 201; data = { order };
+    } else if (url.endsWith('/vnpay/create')) {
+      data = { url: 'https://gateway.example.test/pay' };
     } else if (url.endsWith('/orders/web')) data = { orders };
     else if (url.endsWith('/products/p1')) data = product;
     else data = [product];
@@ -127,6 +137,20 @@ test('checkout validates fields, creates one order and shows it in order history
   expect(await screen.findByText('Chờ xác nhận')).toBeOnTheScreen();
   await fireEvent.press(screen.getByRole('button', { name: 'Xem chi tiết' }));
   expect(screen.getByText('12 Nguyễn Trãi, TP.HCM')).toBeOnTheScreen();
+});
+
+test.each([['VNPay - Thẻ ATM nội địa', 'VNBANK'], ['VNPay - Thẻ quốc tế', 'INTCARD']])('checkout opens %s for the saved order', async (label, method) => {
+  const test = harness();
+  const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+  await test.mount(<CheckoutScreen />);
+  await fireEvent.changeText(screen.getByLabelText('Số điện thoại *'), '0901234567');
+  await fireEvent.changeText(screen.getByLabelText('Địa chỉ nhận hàng *'), '12 Nguyễn Trãi');
+  await fireEvent.changeText(screen.getByLabelText('Tỉnh / Thành phố *'), 'TP.HCM');
+  await fireEvent.press(screen.getByRole('button', { name: label }));
+  await fireEvent.press(screen.getByRole('button', { name: 'Xác nhận đặt hàng' }));
+  await fireEvent.press(await screen.findByRole('button', { name: 'Mở cổng thanh toán' }));
+  expect(open).toHaveBeenCalledWith('https://gateway.example.test/pay');
+  expect(test.orders.map(order => order.paymentChannel)).toEqual([method]);
 });
 
 test('checkout connection loss directs the customer to orders and blocks resubmission', async () => {

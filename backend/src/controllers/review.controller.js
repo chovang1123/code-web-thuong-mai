@@ -23,7 +23,7 @@ export async function createWebReview(req, res) {
     if (!order) {
       return res.status(404).json({ message: "Không tìm thấy đơn hàng." });
     }
-    if (!["completed", "delivered"].includes(order.status)) {
+    if (order.orderStatus !== "delivered") {
       return res.status(400).json({ message: "Chỉ có thể đánh giá đơn hàng đã hoàn thành." });
     }
 
@@ -89,7 +89,7 @@ export async function createReview(req, res) {
       return res.status(403).json({ error: "Not authorized to review this order" });
     }
 
-    if (order.status !== "delivered") {
+    if (order.orderStatus !== "delivered") {
       return res.status(400).json({ error: "Can only review delivered orders" });
     }
 

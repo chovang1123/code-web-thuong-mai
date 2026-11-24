@@ -14,7 +14,9 @@ App React Native + Expo SDK 57, viết và chạy lệnh bằng VS Code. App g�
 | 6 | Lịch sử và chi tiết đơn | Xem cùng đơn với web, kéo để cập nhật trạng thái |
 | 7 | Làm → kiểm thử → sửa → kiểm thử lại | Kiểm tra logic, màn hình, TypeScript, lint và Android bundle |
 
-Để giữ bản đầu gọn, đăng ký tài khoản thực hiện trên website. App dành cho khách mua hàng; người bán và quản trị dùng website. Chưa thêm quản lý địa chỉ đã lưu, đánh giá, yêu thích, thanh toán trực tuyến, thông báo đẩy hay chức năng người bán trên Android.
+Để giữ bản đầu gọn, đăng ký tài khoản thực hiện trên website. App dành cho khách mua hàng; người bán và quản trị dùng website. Chưa thêm quản lý địa chỉ đã lưu, đánh giá, yêu thích, thông báo đẩy hay chức năng người bán trên Android.
+
+Khách có thể chọn COD hoặc VNPay khi đặt đơn. Với đơn online, chọn **Mở cổng thanh toán**, sau đó xem kết quả trong lịch sử đơn. Backend cần cấu hình khóa và URL HTTPS theo `backend/.env.example`.
 
 ## Chạy từ VS Code trên Windows
 

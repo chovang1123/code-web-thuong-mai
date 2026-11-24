@@ -4,3 +4,4 @@ node_modules
 !.env.example
 .expo/
 .vscode/
+/.project-notes/

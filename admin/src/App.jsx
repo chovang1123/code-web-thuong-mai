@@ -23,6 +23,7 @@ import AddressPanel from "./AddressPanel";
 import OrdersPanel from "./OrdersPanel";
 import VoucherPanel from "./VoucherPanel";
 import AdvertisingSection from "./AdvertisingSection";
+import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
 import { withSellerDetails } from "./lib/marketplace";
 import SellerDashboard from "./pages/SellerDashboard";
@@ -337,15 +338,14 @@ function App() {
   const [cart, setCart] = useState(() => loadSavedCart(authEmail));
   const [cartReady, setCartReady] = useState(false);
   const [cartSyncMessage, setCartSyncMessage] = useState("");
-  const [orderError, setOrderError] = useState("");
   const cartSaveQueue = useRef(Promise.resolve());
   const [cartOpen, setCartOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [sellerShop, setSellerShop] = useState(null);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [accountTab, setAccountTab] = useState("profile");
+  const [profileOpen, setProfileOpen] = useState(() => location.pathname === "/orders" && Boolean(authToken));
+  const [accountTab, setAccountTab] = useState(location.pathname === "/orders" ? "orders" : "profile");
   const [profileForm, setProfileForm] = useState({
     name: authUser || "",
     email: authEmail,
@@ -653,7 +653,7 @@ function App() {
         .filter((item) => item.quantity > 0),
     );
 
-  const submitWebOrder = async (shippingAddress) => {
+  const submitWebOrder = async (shippingAddress, paymentMethod = "cod", checkoutReference, bankCode) => {
     if (!authToken) {
       throw new Error("Phiên đăng nhập hết hạn. Vui lòng đăng xuất rồi đăng nhập lại.");
     }
@@ -663,33 +663,38 @@ function App() {
       Authorization: `Bearer ${authToken}`,
       "Content-Type": "application/json",
     };
-    const cartResponse = await fetch(`${apiUrl}/cart/web`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({
-        items: cart.map((item) => ({
-          productId: item._id,
-          quantity: item.quantity,
-        })),
-      }),
-    });
-    const cartData = await cartResponse.json();
-    if (!cartResponse.ok) {
-      throw new Error(
-        cartData.message || "Không thể đồng bộ giỏ hàng trước khi đặt.",
-      );
+    if (paymentMethod === "cod") {
+      const cartResponse = await fetch(`${apiUrl}/cart/web`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            productId: item._id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+      const cartData = await cartResponse.json();
+      if (!cartResponse.ok) {
+        throw new Error(
+          cartData.message || "Không thể đồng bộ giỏ hàng trước khi đặt.",
+        );
+      }
     }
 
     const response = await fetch(`${apiUrl}/orders/web`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ shippingAddress }),
+      body: JSON.stringify({ shippingAddress, paymentMethod, checkoutReference, bankCode, expectedTotal: finalTotal,
+        expectedItems: cart.map(item => ({ product: item._id, quantity: item.quantity })),
+        couponCode: Object.keys(coupons).find(code => coupons[code] === appliedCoupon) }),
     });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || "Không thể tạo đơn hàng.");
     }
     setCart([]);
+    if (paymentMethod !== "cod") await openPayment(data.order._id, authToken, bankCode);
     return data.order;
   };
 
@@ -1132,77 +1137,7 @@ function App() {
           </aside>
         </div>
       )}
-      {checkoutOpen && (
-        <div className="overlay" onClick={() => setCheckoutOpen(false)}>
-          <div
-            className="checkout-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              onClick={() => setCheckoutOpen(false)}
-            >
-              <X />
-            </button>
-            {ordered ? (
-              <div className="success">
-                <span>
-                  <Check />
-                </span>
-                <h2>Đặt hàng thành công</h2>
-                <p>Cảm ơn bạn. Cửa hàng sẽ liên hệ để xác nhận đơn hàng.</p>
-                <button
-                  className="checkout-button"
-                  onClick={() => {
-                    setOrdered(false);
-                    setCheckoutOpen(false);
-                    setCart([]);
-                  }}
-                >
-                  Tiếp tục mua sắm
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="eyebrow">HOÀN TẤT ĐẶT HÀNG</p>
-                <h2>Thông tin nhận hàng</h2>
-                <p className="muted">
-                  Không cần thanh toán online. Bạn sẽ thanh toán khi nhận hàng.
-                </p>
-                <form
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    setOrderError("");
-                    const [fullName, phoneNumber, streetAddress] = Array.from(
-                      event.currentTarget.querySelectorAll("input, textarea"),
-                      (input) => input.value.trim(),
-                    );
-                    try {
-                      await submitWebOrder({
-                        fullName,
-                        phoneNumber,
-                        streetAddress,
-                        city: "Chưa cung cấp",
-                      });
-                      setOrdered(true);
-                    } catch (error) {
-                      setOrderError(error.message);
-                    }
-                  }}
-                >
-                  <input required placeholder="Họ và tên" />
-                  <input required type="tel" placeholder="Số điện thoại" />
-                  <textarea required placeholder="Địa chỉ nhận hàng" rows="3" />
-                  {orderError && <p className="coupon-error" role="alert">{orderError}</p>}
-                  <button className="checkout-button" type="submit">
-                    Xác nhận đặt hàng <ArrowRight size={18} />
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+
       {selectedProduct && (
         <div className="overlay" onClick={() => setSelectedProduct(null)}>
           <div
@@ -1438,7 +1373,7 @@ function App() {
       )}
       {checkoutOpen && !ordered && (
         <div className="checkout-overlay">
-          <CheckoutPanel cart={cart} total={finalTotal} discount={discount} onBack={() => setCheckoutOpen(false)} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
+          <CheckoutPanel authToken={authToken} cart={cart} total={finalTotal} discount={discount} onBack={() => setCheckoutOpen(false)} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
         </div>
       )}
       {checkoutOpen && ordered && (
@@ -1499,7 +1434,7 @@ function App() {
               ) : accountTab === "bank" ? (
                 <BankPanel email={authEmail} />
               ) : accountTab === "addresses" ? (
-                <AddressPanel email={authEmail} />
+                <AddressPanel email={authEmail} authToken={authToken} />
               ) : accountTab === "password" ? (
                 <PasswordPanel email={authEmail} />
               ) : accountTab === "orders" ? (

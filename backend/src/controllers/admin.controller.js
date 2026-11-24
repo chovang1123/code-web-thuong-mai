@@ -1,3 +1,4 @@
+import { blocksFulfillment } from "../services/payments.js";
 import cloudinary from "../config/cloudinary.js";
 import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
@@ -139,7 +140,7 @@ export async function updateOrderStatus(req, res) {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    if (!["pending", "shipped", "delivered"].includes(status)) {
+    if (!["confirmed", "shipping", "pending", "shipped", "delivered"].includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
 
@@ -148,9 +149,11 @@ export async function updateOrderStatus(req, res) {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    order.status = status;
+    if (blocksFulfillment(order)) return res.status(409).json({ message: "Đơn chưa được xác nhận thanh toán." });
+    if (order.orderStatus === "cancelled") return res.sendStatus(409);
+    order.status = ({ confirmed: "pending", shipping: "shipped" })[status] || status;
 
-    if (status === "shipped" && !order.shippedAt) {
+    if (order.status === "shipped" && !order.shippedAt) {
       order.shippedAt = new Date();
     }
 
@@ -182,6 +185,7 @@ export async function getDashboardStats(_, res) {
     const totalOrders = await Order.countDocuments();
 
     const revenueResult = await Order.aggregate([
+      { $match: { $or: [{ paymentMethod: { $ne: "vnpay" } }, { paymentStatus: "paid" }] } },
       {
         $group: {
           _id: null,

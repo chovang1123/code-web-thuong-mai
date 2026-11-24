@@ -471,12 +471,13 @@ function OrderList({ orders, updatingOrder, onAdvance }) {
     <div className="seller-order-list">
       {orders.map((order) => {
         const status = order.orderItems[0]?.sellerStatus || "pending";
-        const nextStatus = status === "pending" ? "shipped" : status === "shipped" ? "delivered" : null;
+        const canShip = order.orderStatus !== "cancelled" && (order.paymentMethod !== "vnpay" || order.paymentStatus === "paid");
+        const nextStatus = !canShip ? null : status === "pending" ? "shipped" : status === "shipped" ? "delivered" : null;
         const statusLabels = { pending: "Chờ xử lý", shipped: "Đang giao", delivered: "Đã giao" };
         return (
           <article className="seller-order-card" key={order._id}>
             <div className="seller-order-top">
-              <div><span className="seller-order-id">ĐƠN #{order._id.slice(-8).toUpperCase()}</span><span className={`seller-order-status ${status}`}>{statusLabels[status]}</span></div>
+              <div><span className="seller-order-id">ĐƠN #{order._id.slice(-8).toUpperCase()}</span><span className={`seller-order-status ${status}`}>{order.orderStatus === "cancelled" ? "Đã hủy" : canShip ? statusLabels[status] : "Chờ thanh toán"}</span></div>
               <time>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</time>
             </div>
             <div className="seller-order-customer"><strong>{order.shippingAddress?.fullName || order.user?.name || "Khách hàng"}</strong><span>{order.orderItems.length} sản phẩm · {currency.format(order.sellerTotal || 0)}</span></div>

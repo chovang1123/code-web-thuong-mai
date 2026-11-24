@@ -107,8 +107,8 @@ function DashboardPage() {
                       </td>
 
                       <td>
-                        <div className={`badge ${getOrderStatusBadge(order.status)}`}>
-                          {capitalizeText(order.status)}
+                        <div className={`badge ${getOrderStatusBadge(order.orderStatus || order.status)}`}>
+                          {capitalizeText(order.orderStatus || order.status)}
                         </div>
                       </td>
 

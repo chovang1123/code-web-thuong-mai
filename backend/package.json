@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test": "node --test",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "seed:products": "node src/seeds/index.js"

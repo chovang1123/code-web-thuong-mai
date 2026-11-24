@@ -93,15 +93,18 @@ function OrdersPage() {
 
                         <td>
                           <select
-                            value={order.status}
+                            value={order.orderStatus || order.status}
                             onChange={(e) => handleStatusChange(order._id, e.target.value)}
                             className="select select-sm"
-                            disabled={updateStatusMutation.isPending}
+                            disabled={updateStatusMutation.isPending || ["pending", "cancelled"].includes(order.orderStatus)}
                           >
                             <option value="pending">Pending</option>
-                            <option value="shipped">Shipped</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="shipping">Shipping</option>
+                            <option value="cancelled" disabled>Cancelled</option>
                             <option value="delivered">Delivered</option>
                           </select>
+                          <small>{order.paymentStatus}</small>
                         </td>
 
                         <td>

@@ -5,14 +5,16 @@ import { Button, colors, Empty, ErrorCard, Loading, ui } from '../../components/
 import { dateTime, money, orderStatuses } from '../../lib/format';
 import { useRemote } from '../../lib/use-remote';
 import { useShop } from '../../state/shop';
+import { OrderPayment } from '../../components/order-payment';
 import type { Order } from '../../types';
 
 function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
   return <View style={ui.card}>
-    <View style={ui.between}><Text style={ui.heading}>#{order._id.slice(-8).toUpperCase()}</Text><Text style={{ color: colors.primary, fontWeight: '700' }}>{orderStatuses[order.status] ?? order.status}</Text></View>
+    <View style={ui.between}><Text style={ui.heading}>#{order._id.slice(-8).toUpperCase()}</Text><Text style={{ color: colors.primary, fontWeight: '700' }}>{order.orderStatus === 'confirmed' ? 'Đã xác nhận' : orderStatuses[order.orderStatus ?? order.status] ?? order.status}</Text></View>
     <Text style={ui.muted}>{dateTime(order.createdAt)}</Text>
     <Text style={ui.text}>{order.orderItems.map((item) => `${item.name} × ${item.quantity}`).join('\n')}</Text>
+    <OrderPayment order={order} />
     <Text style={ui.price}>{money(order.totalPrice)}</Text>
     <Button title={expanded ? 'Thu gọn' : 'Xem chi tiết'} variant="secondary" onPress={() => setExpanded(!expanded)} />
     {expanded ? <View style={{ gap: 8 }}>

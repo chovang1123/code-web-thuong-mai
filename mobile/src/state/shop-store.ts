@@ -1,6 +1,6 @@
 import { ApiError, errorMessage, type StoreApi } from '../lib/api';
 import { validateAddress } from '../lib/format';
-import type { CartItem, Session, ShippingAddress } from '../types';
+import type { CartItem, PaymentMethod, Session, ShippingAddress } from '../types';
 
 export interface SessionStorage {
   read(): Promise<Session | null>;
@@ -146,7 +146,9 @@ export class ShopStore {
 
   orders = () => this.protectedRequest((token) => this.api.orders(token));
 
-  checkout = async (address: ShippingAddress) => {
+  startPayment = (id: string) => this.protectedRequest(token => this.api.startPayment(token, id));
+
+  checkout = async (address: ShippingAddress, method: PaymentMethod = 'cod', expectedTotal?: number, bankCode?: string) => {
     const validation = validateAddress(address);
     if (validation) throw new Error(validation);
     if (this.state.cartBusy) throw new Error('Vui lòng chờ thao tác hiện tại hoàn tất.');
@@ -157,10 +159,11 @@ export class ShopStore {
         const cart = await this.api.cart(token);
         if (!cart.items.length) throw new Error('Giỏ hàng đang trống. Hãy tải lại giỏ hàng.');
         if (cart.items.some((item) => !item.product)) throw new Error('Giỏ có sản phẩm không còn bán. Hãy kiểm tra lại trên website.');
-        return this.api.checkout(token, {
+        const shipping = {
           fullName: address.fullName.trim(), streetAddress: address.streetAddress.trim(),
           city: address.city.trim(), phoneNumber: address.phoneNumber.replace(/[\s.-]/g, ''),
-        });
+        };
+        return method === 'cod' ? this.api.checkout(token, shipping) : this.api.checkout(token, shipping, method, expectedTotal, bankCode);
       });
       this.update({ cart: [], cartLoaded: true });
       return order;

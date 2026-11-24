@@ -1,11 +1,13 @@
 import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
 
-dotenv.config({ quiet: true });
+dotenv.config({ path: fileURLToPath(new URL("../../.env", import.meta.url)), quiet: true });
 
 export const ENV = {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT || 3000,
   DB_URL: process.env.DB_URL,
+  MONGO_DNS_SERVERS: process.env.MONGO_DNS_SERVERS,
   CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY,
   CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,
   WEB_AUTH_SECRET: process.env.WEB_AUTH_SECRET,

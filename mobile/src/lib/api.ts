@@ -1,4 +1,4 @@
-import type { Cart, Order, Product, Session, ShippingAddress } from '../types';
+import type { Cart, Order, PaymentMethod, Product, Session, ShippingAddress } from '../types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
@@ -23,7 +23,7 @@ export function createApi(baseUrl: string, fetcher: (url: string, init?: Request
 
   async function request<T>(path: string, token?: string, method = 'GET', body?: unknown): Promise<T> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), path.startsWith('/payments/') ? 40000 : 15000);
     try {
       const response = await fetcher(`${base}${path}`, {
         method,
@@ -62,8 +62,9 @@ export function createApi(baseUrl: string, fetcher: (url: string, init?: Request
     saveCart: async (token: string, items: { productId: string; quantity: number }[]) =>
       (await request<{ cart: Cart }>('/cart/web', token, 'PUT', { items })).cart,
     orders: async (token: string) => (await request<{ orders: Order[] }>('/orders/web', token)).orders,
-    checkout: async (token: string, shippingAddress: ShippingAddress) =>
-      (await request<{ order: Order }>('/orders/web', token, 'POST', { shippingAddress })).order,
+    startPayment: (token: string, id: string) => request<{ url: string }>('/vnpay/create', token, 'POST', { orderId: id }),
+    checkout: async (token: string, shippingAddress: ShippingAddress, paymentMethod?: PaymentMethod, expectedTotal?: number, bankCode?: string) =>
+      (await request<{ order: Order }>('/orders/web', token, 'POST', { shippingAddress, paymentMethod, expectedTotal, bankCode })).order,
   };
 }
 

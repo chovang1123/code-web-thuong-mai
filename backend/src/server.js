@@ -1,3 +1,5 @@
+import { paymentRoutes, vnpayRoutes, orderPaymentRoutes } from "./routes/payment.route.js";
+import { expirePayments, migrateOrderStates } from "./services/payments.js";
 import express from "express";
 import path from "path";
 import { clerkMiddleware } from "@clerk/express";
@@ -55,6 +57,9 @@ app.get("/", (req, res) => {
   });
 });
 
+app.use("/api/payments", paymentRoutes);
+app.use("/api/vnpay", vnpayRoutes);
+app.use("/api/orders", orderPaymentRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/web-reviews", webReviewRoutes);
@@ -85,14 +90,19 @@ if (ENV.NODE_ENV === "production") {
 
 const startServer = async () => {
   await connectDB();
+  await migrateOrderStates();
   await ensureAdmin();
   const advanceOrderStatusesSafely = async () => {
     try {
       await advanceOrderStatuses();
+
     } catch (error) {
       console.error("Unable to advance order statuses:", error);
     }
   };
+  const expire = () => expirePayments().catch(error => console.error("Order expiration failed", error));
+  await expire();
+  setInterval(expire, 60_000);
   await advanceOrderStatusesSafely();
   setInterval(advanceOrderStatusesSafely, 5_000);
   app.listen(ENV.PORT, () => {

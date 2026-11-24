@@ -6,13 +6,16 @@ import { Button, Empty, ErrorCard, Field, FormScreen, ui } from '../components/u
 import { ConnectionError, errorMessage } from '../lib/api';
 import { cartTotal, money } from '../lib/format';
 import { useShop } from '../state/shop';
-import type { Order, ShippingAddress } from '../types';
+import { OrderPayment } from '../components/order-payment';
+import type { Order, PaymentMethod, ShippingAddress } from '../types';
 
 export default function CheckoutScreen() {
   const { session, cart, cartLoaded, cartBusy, store } = useShop();
   const [address, setAddress] = useState<ShippingAddress>({
     fullName: session?.user.name ?? '', phoneNumber: session?.user.phone ?? '', streetAddress: '', city: '',
   });
+  const [channel, setChannel] = useState("VNBANK");
+  const [method, setMethod] = useState<PaymentMethod>('cod');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState(false);
@@ -25,7 +28,7 @@ export default function CheckoutScreen() {
     submitting.current = true;
     setBusy(true);
     setError('');
-    try { setOrder(await store.checkout(address)); }
+    try { setOrder(await store.checkout(address, method, cartTotal(cart), channel)); }
     catch (failure) {
       if (failure instanceof ConnectionError) {
         setUncertain(true);
@@ -39,6 +42,7 @@ export default function CheckoutScreen() {
     <Text style={ui.label}>ĐẶT HÀNG THÀNH CÔNG</Text><Text style={ui.title}>Cảm ơn bạn, {session.user.name}!</Text>
     <Text selectable style={ui.text}>Mã đơn: {order._id}</Text><Text style={ui.price}>{money(order.totalPrice)}</Text>
     <Text style={ui.muted}>Đơn đã được lưu lên hệ thống và có thể xem trên website.</Text>
+    <OrderPayment order={order} />
     <Button title="Xem đơn hàng" onPress={() => router.replace('/(tabs)/orders')} />
     <Button title="Tiếp tục mua sắm" variant="secondary" onPress={() => router.replace('/(tabs)')} />
   </View></FormScreen>;
@@ -57,7 +61,10 @@ export default function CheckoutScreen() {
       <Text style={ui.heading}>Đơn hàng</Text>
       {cart.map((item, index) => <View key={item.product?._id ?? index} style={ui.between}><Text style={[ui.text, { flex: 1 }]}>{item.product?.name ?? 'Sản phẩm không còn bán'} × {item.quantity}</Text><Text style={ui.text}>{money((item.product?.price ?? 0) * item.quantity)}</Text></View>)}
       <View style={ui.between}><Text style={ui.heading}>Tạm tính</Text><Text style={ui.price}>{money(cartTotal(cart))}</Text></View>
-      <Text style={ui.muted}>Chưa thanh toán trực tuyến. Đơn được tạo theo quy trình hiện có của website; tổng tiền cuối cùng do máy chủ tính.</Text>
+      <Text style={ui.heading}>Phương thức thanh toán</Text>
+      {(['cod', 'VNBANK', 'INTCARD'] as const).map(value =>
+        <Button key={value} title={{ cod: 'Thanh toán khi nhận hàng', VNBANK: 'VNPay - Thẻ ATM nội địa', INTCARD: 'VNPay - Thẻ quốc tế' }[value]}
+          variant={(method === 'cod' ? value === 'cod' : channel === value) ? 'primary' : 'secondary'} disabled={busy} onPress={() => { setMethod(value === "cod" ? "cod" : "vnpay"); setChannel(value); }} />)}
     </View>
     {error ? <ErrorCard message={error} /> : null}
     <Button title="Xác nhận đặt hàng" onPress={() => { void submit(); }} loading={busy} disabled={cartBusy || uncertain} />

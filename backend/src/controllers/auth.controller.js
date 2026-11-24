@@ -97,14 +97,14 @@ function validateAddress(data) {
 }
 
 export async function listAddresses(req, res) {
-  const user = await User.findOne({ email: req.query.email }).select("addresses");
+  const user = req.user;
   if (!user) return res.status(404).json({ message: "User not found" });
   res.status(200).json({ addresses: user.addresses });
 }
 
 export async function addAddress(req, res) {
   if (!validateAddress(req.body)) return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin địa chỉ" });
-  const user = await User.findOne({ email: req.body.email });
+  const user = req.user;
   if (!user) return res.status(404).json({ message: "User not found" });
   const shouldBeDefault = Boolean(req.body.isDefault) || user.addresses.length === 0;
   if (shouldBeDefault) user.addresses.forEach((address) => { address.isDefault = false; });
@@ -115,7 +115,7 @@ export async function addAddress(req, res) {
 
 export async function updateAddress(req, res) {
   if (!validateAddress(req.body)) return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin địa chỉ" });
-  const user = await User.findOne({ email: req.body.email });
+  const user = req.user;
   if (!user) return res.status(404).json({ message: "User not found" });
   const address = user.addresses.id(req.params.addressId);
   if (!address) return res.status(404).json({ message: "Address not found" });
@@ -126,7 +126,7 @@ export async function updateAddress(req, res) {
 }
 
 export async function deleteAddress(req, res) {
-  const user = await User.findOne({ email: req.body.email });
+  const user = req.user;
   if (!user) return res.status(404).json({ message: "User not found" });
   const address = user.addresses.id(req.params.addressId);
   if (!address) return res.status(404).json({ message: "Address not found" });
@@ -138,7 +138,7 @@ export async function deleteAddress(req, res) {
 }
 
 export async function setDefaultAddress(req, res) {
-  const user = await User.findOne({ email: req.body.email });
+  const user = req.user;
   if (!user) return res.status(404).json({ message: "User not found" });
   const address = user.addresses.id(req.params.addressId);
   if (!address) return res.status(404).json({ message: "Address not found" });

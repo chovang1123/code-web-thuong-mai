@@ -24,6 +24,7 @@ function setup(savedSession: Session | null = null) {
       return structuredClone(serverCart);
     }),
     orders: jest.fn<Promise<Order[]>, [string]>(async () => [order]),
+    startPayment: jest.fn(async (_token: string, _id: string) => ({ url: 'https://example.test/pay' })),
     checkout: jest.fn<Promise<Order>, [string, ShippingAddress]>(async () => { serverCart = { items: [] }; return order; }),
   };
   return { api, storage, store: new ShopStore(api, storage),
