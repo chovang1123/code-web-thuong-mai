@@ -27,6 +27,7 @@ import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
 import { withSellerDetails } from "./lib/marketplace";
 import SellerDashboard from "./pages/SellerDashboard";
+import ProductImage from "./components/ProductImage";
 
 const fallbackProducts = [
   {
@@ -541,7 +542,7 @@ function App() {
 
   const categories = [
     "Tất cả",
-    ...new Set(products.map((product) => product.category)),
+    ...new Set(products.map((product) => product.category).filter(item => item && item !== "Tất cả")),
   ];
   const visibleProducts = useMemo(
     () =>
@@ -863,7 +864,7 @@ function App() {
                           ?.scrollIntoView({ behavior: "smooth" });
                       }}
                     >
-                      <img src={product.images?.[0]} alt="" />
+                      <ProductImage product={product} />
                       <span>{product.name}</span>
                       <small>{product.category}</small>
                     </button>
@@ -937,6 +938,7 @@ function App() {
               <button
                 className={category === item ? "category active" : "category"}
                 key={item}
+                aria-pressed={category === item}
                 onClick={() => setCategory(item)}
               >
                 {item}
@@ -969,7 +971,7 @@ function App() {
                     <span className="sale-badge">
                       -{product.discountPercent}%
                     </span>
-                    <img src={product.images?.[0]} alt={product.name} />
+                    <ProductImage product={product} />
                     <button
                       className="add-button"
                       onClick={(event) => {
@@ -1073,7 +1075,7 @@ function App() {
                 <div className="cart-items">
                   {cart.map((item) => (
                     <div className="cart-item" key={item._id}>
-                      <img src={item.images?.[0]} alt="" />
+                      <ProductImage product={item} />
                       <div>
                         <h3>{item.name}</h3>
                         <strong>{formatPrice(item.price)}</strong>
@@ -1154,10 +1156,7 @@ function App() {
               <span className="sale-badge">
                 -{selectedProduct.discountPercent}%
               </span>
-              <img
-                src={selectedProduct.images?.[0]}
-                alt={selectedProduct.name}
-              />
+              <ProductImage product={selectedProduct} />
             </div>
             <div className="detail-content">
               <p className="breadcrumb">
@@ -1355,7 +1354,7 @@ function App() {
                       }}
                     >
                       <div className="product-image">
-                        <img src={product.images?.[0]} alt={product.name} />
+                        <ProductImage product={product} />
                       </div>
                       <div className="product-info">
                         <span className="product-brand">{product.brand}</span>
