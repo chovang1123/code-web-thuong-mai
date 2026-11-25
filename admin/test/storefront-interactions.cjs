@@ -13,9 +13,12 @@ const products = [
   { _id: "a", name: "Sổ kế hoạch", category: "Văn phòng phẩm", price: 100000, originalPrice: 150000, averageRating: 4.5, sold: 20, stock: 10, images: [] },
   { _id: "b", name: "Kem dưỡng", category: "Làm đẹp", price: 200000, averageRating: 4, sold: 10, stock: 10, images: [] },
   { _id: "c", name: "Serum dưỡng da", category: "Làm đẹp", price: 240000, originalPrice: 300000, averageRating: 4.8, sold: 40, stock: 10, images: [] },
+  { _id: "d", name: "Mặt nạ dưỡng da", category: "Làm đẹp", price: 210000, stock: 10, images: [] },
+  { _id: "e", name: "Bút viết", category: "Văn phòng phẩm", price: 20000, stock: 10, images: [] },
+  { _id: "f", name: "Giấy ghi chú", category: "Văn phòng phẩm", price: 30000, stock: 10, images: [] },
 ];
 
-test("header, sidebar and chips share one category; drawer updates quantities and removes products", async t => {
+test("category filters every shelf; viewed history and cart operations keep working", async t => {
   const dom = new JSDOM('<div id="root"></div>', { url: "https://shop.test", runScripts: "outside-only", virtualConsole: new VirtualConsole() });
   t.after(() => dom.window.close());
   const w = dom.window, d = w.document;
@@ -33,22 +36,21 @@ test("header, sidebar and chips share one category; drawer updates quantities an
   const dist = path.resolve(__dirname, "../dist");
   const asset = fs.readFileSync(path.join(dist, "index.html"), "utf8").match(/src="\/([^"]+\.js)"/)[1];
   w.eval(fs.readFileSync(path.join(dist, asset), "utf8"));
-  await until(() => d.querySelectorAll(".catalog-grid .product-card").length === 3);
+  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 6);
   d.querySelector(".category-menu").open = true;
   [...d.querySelectorAll(".category-dropdown button")].find(button => button.textContent === "Làm đẹp").click();
-  await until(() => d.querySelectorAll(".catalog-grid .product-card").length === 2);
+  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 3);
   assert.equal(d.querySelectorAll(".category-dropdown [aria-pressed=true]").length, 1);
   assert.equal(d.querySelectorAll(".category-chips [aria-pressed=true]").length, 1);
   assert.match(d.querySelector(".filter-chip").textContent, /Làm đẹp/);
   d.querySelector(".filter-chip").click();
-  await until(() => d.querySelectorAll(".catalog-grid .product-card").length === 3);
-  d.querySelector('.catalog-grid [aria-label="Xem Kem dưỡng"]').click();
+  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 6);
+  d.querySelector('.shelf-track [aria-label="Xem Kem dưỡng"]').click();
   await until(() => d.querySelector(".product-detail"));
   assert.equal(JSON.parse(w.localStorage.getItem("net_store_recently_viewed"))[0]._id, "b");
-  assert.match(d.querySelector(".recommendation-reason").textContent, /Vì bạn đã xem Kem dưỡng/);
   d.querySelector('[aria-label="Đóng chi tiết sản phẩm"]').click();
   await until(() => !d.querySelector(".product-detail"));
-  d.querySelector('.catalog-grid [aria-label="Thêm Kem dưỡng vào giỏ"]').click();
+  d.querySelector('.shelf-track [aria-label="Thêm Kem dưỡng vào giỏ"]').click();
   await until(() => d.querySelector(".cart-count").textContent === "1");
   d.querySelector('[aria-label="Mở giỏ hàng"]').click();
   await until(() => d.querySelector(".cart-drawer"));

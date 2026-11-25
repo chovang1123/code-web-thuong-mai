@@ -16,15 +16,13 @@ import BankPanel from "./BankPanel";
 import AddressPanel from "./AddressPanel";
 import OrdersPanel from "./OrdersPanel";
 import VoucherPanel from "./VoucherPanel";
-import AdvertisingSection from "./AdvertisingSection";
 import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
 import { decorateProduct, formatPrice, productRating } from "./lib/products";
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
 import StoreHeader from "./components/StoreHeader";
-import StoreCatalog from "./components/StoreCatalog";
-import Recommendations from "./components/Recommendations";
+import HomePage from "./components/HomePage";
 import { historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
 import CartDrawer, { CartPage } from "./components/CartDrawer";
 import Dialog from "./components/Dialog";
@@ -77,7 +75,6 @@ function App() {
   const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState("Tất cả");
-  const [catalogTab, setCatalogTab] = useState("featured");
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [cart, setCart] = useState(() => loadSavedCart(authEmail));
@@ -558,38 +555,12 @@ function App() {
     onApplyCoupon: applyCoupon, couponMessage, syncMessage: cartSyncMessage };
   return (
     <div className="storefront">
-      <StoreHeader products={products} user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onSale={() => { setCategory("Tất cả"); setSearch(""); setCatalogTab("sale"); }} onLogout={() => {
+      <StoreHeader products={products} user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onLogout={() => {
         ["user", "email", "role", "token"].forEach(key => localStorage.removeItem("net_store_" + key));
         setAuthUser(null); setAuthToken("");
       }} />
       <main id="top">
-        <StoreCatalog products={products} category={category} onCategory={setCategory} search={search} onSearch={setSearch} tab={catalogTab} onTab={setCatalogTab} onView={viewProduct} onAdd={addToCart} onShop={setSellerShop} />
-        <Recommendations products={products} history={viewHistory} currentProduct={selectedProduct} onView={viewProduct} onAdd={addToCart} />
-        <section className="story" id="story">
-          <div className="story-image">
-            <img
-              src="https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=1000&q=85"
-              alt="Không gian sống tối giản"
-            />
-          </div>
-          <div className="story-copy">
-            <p className="eyebrow">NET / TRIẾT LÝ</p>
-            <h2>
-              Mua ít hơn.
-              <br />
-              <em>Chọn đúng hơn.</em>
-            </h2>
-            <p>
-              Chúng tôi tin một sản phẩm tốt không cần nói quá nhiều. Nó chỉ cần
-              làm đúng việc của mình, bền bỉ theo thời gian và khiến bạn muốn
-              cầm lên mỗi ngày.
-            </p>
-            <a className="text-link" href="#shop">
-              Xem bộ sưu tập <ArrowRight size={18} />
-            </a>
-          </div>
-        </section>
-        <details className="store-campaigns"><summary>Khám phá ưu đãi hôm nay</summary><AdvertisingSection onShopClick={() => document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" })} /></details>
+        <HomePage products={products} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onShop={setSellerShop} />
       </main>
       <footer id="contact">
         <div className="brand">
