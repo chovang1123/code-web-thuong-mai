@@ -7,6 +7,7 @@ import { Product } from "../models/product.model.js";
 import { Review } from "../models/review.model.js";
 import { User } from "../models/user.model.js";
 import { WebReview } from "../models/web-review.model.js";
+import { Category } from "../models/category.model.js";
 
 export const connectDB = async () => {
   try {
@@ -25,7 +26,7 @@ export const connectDB = async () => {
     const conn = await mongoose.connect(mongoUri);
     console.log(`✅ Connected to MONGODB: ${conn.connection.host}`);
 
-    const models = [User, Product, Cart, Order, Review, WebReview];
+    const models = [User, Product, Category, Cart, Order, Review, WebReview];
     const existingCollections = new Set(
       (await conn.connection.db.listCollections({}, { nameOnly: true }).toArray())
         .map((collection) => collection.name),

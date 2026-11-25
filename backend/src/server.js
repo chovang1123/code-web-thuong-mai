@@ -16,6 +16,9 @@ import userRoutes from "./routes/user.route.js";
 import orderRoutes from "./routes/order.route.js";
 import reviewRoutes, { webOrderReviewRoutes } from "./routes/review.route.js";
 import productRoutes from "./routes/product.route.js";
+import categoryRoutes from "./routes/category.route.js";
+import { categoryPageRoutes, categoryPageMeta } from "./routes/category-pages.route.js";
+import { readFile } from "node:fs/promises";
 import cartRoutes, { webCartRoutes } from "./routes/cart.route.js";
 import authRoutes from "./routes/auth.route.js";
 import webAdminRoutes from "./routes/web-admin.route.js";
@@ -61,6 +64,8 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/vnpay", vnpayRoutes);
 app.use("/api/orders", orderPaymentRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api/categories", categoryRoutes);
+app.use(categoryPageRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/web-reviews", webReviewRoutes);
 app.use("/api/web-admin", webAdminRoutes);
@@ -81,6 +86,11 @@ app.use("/api/cart", cartRoutes);
 
 // make our app ready for deployment
 if (ENV.NODE_ENV === "production") {
+  app.get("/danh-muc/:slug", async (req, res) => {
+    const html = await readFile(path.join(__dirname, "../admin/dist/index.html"), "utf8");
+    const origin = new URL(process.env.PUBLIC_SITE_URL || ENV.CLIENT_URL || "http://localhost:5173").origin;
+    res.type("html").send(categoryPageMeta(html, req.params.slug, origin));
+  });
   app.use(express.static(path.join(__dirname, "../admin/dist")));
 
   app.get("/{*any}", (req, res) => {

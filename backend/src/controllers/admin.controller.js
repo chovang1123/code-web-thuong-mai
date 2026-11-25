@@ -3,6 +3,7 @@ import cloudinary from "../config/cloudinary.js";
 import { Product } from "../models/product.model.js";
 import { Order } from "../models/order.model.js";
 import { User } from "../models/user.model.js";
+import { resolveProductCategory } from "../utils/product-categories.js";
 
 export async function createProduct(req, res) {
   try {
@@ -44,8 +45,7 @@ export async function createProduct(req, res) {
       description,
       price: parseFloat(price),
       stock: parseInt(stock),
-      category,
-      brand,
+      ...await resolveProductCategory(req.body),
       sellerName,
       sellerLocation,
       images: imageUrls,
@@ -54,7 +54,7 @@ export async function createProduct(req, res) {
     res.status(201).json(product);
   } catch (error) {
     console.error("Error creating product", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(error.status || 500).json({ message: error.status === 400 ? error.message : "Internal server error" });
   }
 }
 
@@ -92,8 +92,8 @@ export async function updateProduct(req, res) {
     if (description) product.description = description;
     if (price !== undefined) product.price = parseFloat(price);
     if (stock !== undefined) product.stock = parseInt(stock);
-    if (category) product.category = category;
-    if (brand !== undefined) product.brand = brand;
+    if (category || req.body.categorySlug || req.body.tags !== undefined || req.body.gender !== undefined || req.body.os !== undefined) Object.assign(product, await resolveProductCategory(req.body, product));
+    if (brand !== undefined && !category && !req.body.categorySlug) Object.assign(product, await resolveProductCategory(req.body, product));
     if (sellerName !== undefined) product.sellerName = sellerName;
     if (sellerLocation !== undefined) product.sellerLocation = sellerLocation;
 
@@ -117,7 +117,7 @@ export async function updateProduct(req, res) {
     res.status(200).json(product);
   } catch (error) {
     console.error("Error updating products:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(error.status || 500).json({ message: error.status === 400 ? error.message : "Internal server error" });
   }
 }
 
