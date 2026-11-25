@@ -12,7 +12,6 @@ export const productDiscount = product => product.originalPrice > product.price
   ? Math.round((1 - product.price / product.originalPrice) * 100) : 0;
 export const isFreeShipping = product => product.freeShipping !== false;
 
-export function decorateProduct(product, index = 0) {
-  return { ...withSellerDetails(product, index), originalPrice: product.originalPrice || product.price,
-    discountPercent: productDiscount(product), sold: productSold(product) };
+export function decorateProduct(product) {
+  return { ...withSellerDetails(product), discountPercent: productDiscount(product) };
 }

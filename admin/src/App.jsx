@@ -18,7 +18,7 @@ import OrdersPanel from "./OrdersPanel";
 import VoucherPanel from "./VoucherPanel";
 import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
-import { decorateProduct, formatPrice, productRating } from "./lib/products";
+import { decorateProduct, formatPrice, productRating, productSold } from "./lib/products";
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
 import StoreHeader from "./components/StoreHeader";
@@ -74,6 +74,9 @@ function App() {
   });
   const [authError, setAuthError] = useState("");
   const [products, setProducts] = useState([]);
+  const [productLoading, setProductLoading] = useState(true);
+  const [productError, setProductError] = useState("");
+  const [productReload, setProductReload] = useState(0);
   const [category, setCategory] = useState("Tất cả");
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -86,7 +89,7 @@ function App() {
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [viewHistory, setViewHistory] = useState(() => readViewHistory(localStorage));
+  const [viewHistory, setViewHistory] = useState(() => { try { return readViewHistory(localStorage); } catch { return []; } });
   useEffect(() => { try { localStorage.setItem(historyKey, JSON.stringify(viewHistory)); } catch { /* Browsing works when storage is disabled. */ } }, [viewHistory]);
   const viewProduct = product => { setViewHistory(history => recordProductView(history, product)); setSelectedProduct(product); };
   const [sellerShop, setSellerShop] = useState(null);
@@ -227,52 +230,36 @@ function App() {
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const controller = new AbortController();
     let isMounted = true;
-
+    let running = false;
     const loadProducts = async () => {
+      if (running) return;
+      running = true;
       try {
-        const response = await fetch(`${apiUrl}/products`);
-        if (!response.ok) {
-          throw new Error(`Product request failed with status ${response.status}`);
-        }
-
+        const response = await fetch(`${apiUrl}/products`, { signal: controller.signal });
+        if (!response.ok) throw new Error("Không thể tải sản phẩm. Vui lòng thử lại.");
         const data = await response.json();
-        if (!isMounted || !Array.isArray(data)) return;
-        const householdProducts = data.filter(
-          (product) =>
-            !["Ăn uống", "Đồ ăn", "Food", "Beverage"].includes(
-              product.category,
-            ),
-        );
-        const latestProducts = householdProducts.map(decorateProduct);
+        if (!Array.isArray(data)) throw new Error("Dữ liệu sản phẩm chưa hợp lệ. Vui lòng thử lại.");
+        if (!isMounted) return;
+        const latestProducts = data.filter(product => !["Ăn uống", "Đồ ăn", "Food", "Beverage"].includes(product.category)).map(decorateProduct);
         setProducts(latestProducts);
-        setSelectedProduct((current) =>
-          current
-            ? latestProducts.find((product) => product._id === current._id) ||
-              null
-            : current,
-        );
-      } catch (error) {
-        if (isMounted) console.error("Unable to refresh storefront products:", error);
+        setProductError("");
+        setSelectedProduct(current => current ? latestProducts.find(product => product._id === current._id) || null : current);
+      } catch {
+        if (isMounted && !controller.signal.aborted) { setProducts([]); setProductError("Không thể tải sản phẩm. Vui lòng thử lại."); }
+      } finally {
+        running = false;
+        if (isMounted) setProductLoading(false);
       }
     };
-
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") loadProducts();
-    };
-
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") loadProducts(); };
     loadProducts();
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
-    const refreshInterval = window.setInterval(refreshWhenVisible, 30000);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-      window.clearInterval(refreshInterval);
-    };
-  }, []);
+    const timer = window.setInterval(refreshWhenVisible, 30000);
+    return () => { isMounted = false; controller.abort(); window.removeEventListener("focus", refreshWhenVisible); document.removeEventListener("visibilitychange", refreshWhenVisible); window.clearInterval(timer); };
+  }, [productReload]);
 
   useEffect(() => {
     if (!selectedProduct?._id || selectedProduct._id.length !== 24) return;
@@ -560,7 +547,7 @@ function App() {
         setAuthUser(null); setAuthToken("");
       }} />
       <main id="top">
-        <HomePage products={products} history={viewHistory} cart={cart} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
+        <HomePage loading={productLoading} error={productError} onRetry={() => { setProductLoading(true); setProductReload(value => value + 1); }} products={products} history={viewHistory} cart={cart} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
       </main>
       <footer id="contact">
         <div className="brand">
@@ -600,7 +587,7 @@ function App() {
               <p className="detail-brand">Thương hiệu: {selectedProduct.brand}</p>
               <div className="detail-rating">
                 <span>{productRating(selectedProduct) > 0 ? `★ ${productRating(selectedProduct).toFixed(1)}` : "Chưa có đánh giá"}</span>
-                <span>{selectedProduct.sold > 0 ? `${selectedProduct.sold} đã bán` : "Chưa có lượt bán"}</span>
+                <span>{productSold(selectedProduct) > 0 ? `${productSold(selectedProduct)} đã bán` : "Chưa có lượt bán"}</span>
               </div>
               <div className="detail-price">
                 <strong>{formatPrice(selectedProduct.price)}</strong>

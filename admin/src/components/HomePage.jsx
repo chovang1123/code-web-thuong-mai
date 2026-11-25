@@ -4,12 +4,13 @@ import CategoryChips from "./CategoryChips";
 import FilterDrawer from "./FilterDrawer";
 import ProductShelf from "./ProductShelf";
 import FeaturedHero from "./FeaturedHero";
+import HomeLoadState from "./HomeLoadState";
 import { defaultFilters, filterProducts } from "../lib/productFilters";
 import { formatPrice } from "../lib/products";
 import { buildHomeShelves, featuredProducts } from "../lib/homeCatalog";
 import { getRecommendations } from "../lib/recommendations";
 
-export default function HomePage({ products, history = [], cart = [], category, onCategory, search, onSearch, onView, onAdd, onBuy, onShop }) {
+export default function HomePage({ products, history = [], cart = [], category, onCategory, search, onSearch, onView, onAdd, onBuy, onShop, loading = false, error = "", onRetry }) {
   const [filters, setFilters] = useState({ ...defaultFilters });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const visible = useMemo(() => filterProducts(products, { category, search, filters }), [products, category, search, filters]);
@@ -37,9 +38,11 @@ export default function HomePage({ products, history = [], cart = [], category, 
     <h1 className="sr-only">Trang chủ Net Store</h1>
     <CategoryChips products={products} category={category} onCategory={onCategory} onFilters={() => setFiltersOpen(true)} activeCount={chips.length} />
     <div className="home-filter-status"><div className="filter-chips">{chips.map(chip => <button type="button" className="filter-chip" key={chip.label} onClick={chip.remove} aria-label={`Bỏ lọc ${chip.label}`}>{chip.label}<X size={14} /></button>)}{chips.length > 0 && <button type="button" className="clear-filters" onClick={clear}>Xóa tất cả</button>}</div>{chips.length > 0 && <span className="result-count" aria-live="polite">{visible.length} sản phẩm</span>}</div>
-    <FeaturedHero products={featured} onView={onView} onBuy={onBuy} />
-    {shelves.map(shelf => <ProductShelf key={shelf.kind} {...shelf} onView={onView} onAdd={onAdd} onShop={onShop} />)}
-    {!visible.length && <div className="home-empty"><h2>Không có sản phẩm phù hợp</h2><p>Thử thay đổi danh mục hoặc khoảng giá.</p>{chips.length > 0 && <button type="button" className="secondary-button" onClick={clear}>Xóa bộ lọc</button>}</div>}
+    {loading || error ? <HomeLoadState loading={loading} error={error} onRetry={onRetry} /> : <>
+      <FeaturedHero products={featured} onView={onView} onBuy={onBuy} />
+      {shelves.map(shelf => <ProductShelf key={shelf.kind} {...shelf} onView={onView} onAdd={onAdd} onShop={onShop} />)}
+      {!visible.length && <div className="home-empty"><h2>{chips.length ? "Không có sản phẩm phù hợp" : "Cửa hàng chưa có sản phẩm"}</h2><p>{chips.length ? "Thử thay đổi danh mục hoặc khoảng giá." : "Bạn có thể quay lại sau để xem các sản phẩm mới."}</p>{chips.length > 0 && <button type="button" className="secondary-button" onClick={clear}>Xóa bộ lọc</button>}</div>}
+    </>}
     {filtersOpen && <FilterDrawer products={products} category={category} onCategory={onCategory} filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} resultCount={visible.length} />}
   </div>;
 }

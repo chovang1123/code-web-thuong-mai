@@ -16,6 +16,7 @@ const products = [
   { _id: "d", name: "Mặt nạ dưỡng da", category: "Làm đẹp", price: 210000, stock: 10, images: [] },
   { _id: "e", name: "Bút viết", category: "Văn phòng phẩm", price: 20000, stock: 10, images: [] },
   { _id: "f", name: "Giấy ghi chú", category: "Văn phòng phẩm", price: 30000, stock: 10, images: [] },
+  { _id: "g", name: "Toner dịu nhẹ", category: "Làm đẹp", price: 220000, stock: 10, images: [] },
 ];
 
 test("category filters every shelf; viewed history and cart operations keep working", async t => {
@@ -36,18 +37,20 @@ test("category filters every shelf; viewed history and cart operations keep work
   const dist = path.resolve(__dirname, "../dist");
   const asset = fs.readFileSync(path.join(dist, "index.html"), "utf8").match(/src="\/([^"]+\.js)"/)[1];
   w.eval(fs.readFileSync(path.join(dist, asset), "utf8"));
-  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 6);
+  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 7);
   d.querySelector(".category-menu").open = true;
   [...d.querySelectorAll(".category-dropdown button")].find(button => button.textContent === "Làm đẹp").click();
-  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 3);
+  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 4);
   assert.equal(d.querySelectorAll(".category-dropdown [aria-pressed=true]").length, 1);
   assert.equal(d.querySelectorAll(".category-chips [aria-pressed=true]").length, 1);
   assert.match(d.querySelector(".filter-chip").textContent, /Làm đẹp/);
   d.querySelector(".filter-chip").click();
-  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 6);
+  await until(() => d.querySelectorAll(".shelf-track .product-card").length === 7);
   d.querySelector('.shelf-track [aria-label="Xem Kem dưỡng"]').click();
   await until(() => d.querySelector(".product-detail"));
   assert.equal(JSON.parse(w.localStorage.getItem("net_store_recently_viewed"))[0]._id, "b");
+  assert.match(d.querySelector('[data-kind="recommendations"] .shelf-heading p').textContent, /Vì bạn đã xem Kem dưỡng/);
+  assert.equal(d.querySelectorAll('[data-kind="recommendations"] .product-card').length, 3);
   d.querySelector('[aria-label="Đóng chi tiết sản phẩm"]').click();
   await until(() => !d.querySelector(".product-detail"));
   d.querySelector('.shelf-track [aria-label="Thêm Kem dưỡng vào giỏ"]').click();

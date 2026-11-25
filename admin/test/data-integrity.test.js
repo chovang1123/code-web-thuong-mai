@@ -11,6 +11,8 @@ test("normalization preserves API names and never fabricates a shop or brand", (
   assert.equal(result.brand, undefined);
   assert.equal(result.sellerLocation, undefined);
   assert.equal(result.price, product.price);
+  assert.equal(result.originalPrice, undefined);
+  assert.equal(result.sold, undefined);
 });
 test("loading the admin panel cannot automatically seed products", () => {
   const source = fs.readFileSync(new URL("../src/AdminPanel.jsx", import.meta.url), "utf8");

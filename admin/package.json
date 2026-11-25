@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "node --test test/*.test.js test/checkout-smoke.cjs test/storefront-interactions.cjs",
-    "test:ui": "node test/ui-preview.cjs"
+    "test:ui": "vite --host 127.0.0.1 --port 5173 --strictPort"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.56.2",
