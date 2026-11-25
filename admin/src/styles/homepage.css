@@ -13,6 +13,14 @@
 .category-dropdown button { text-align: left; padding: 8px 12px; border: 0; background: transparent; color: var(--color-primary); font-size: 12px; cursor: pointer; }
 .category-dropdown button:hover, .category-dropdown [aria-pressed=true] { background: var(--color-tag); }
 .mobile-search-toggle { display: none; border: 0; color: var(--color-primary); background: transparent; }
+.home-catalog.catalog-section.shop-section { display: block; max-width: var(--home-width); margin: 0 auto; padding: 12px 24px 28px; }
+.home-category-row { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.category-chips { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; overflow-x: auto; margin: 0; padding: 2px; scrollbar-width: none; }
+.category-chips::-webkit-scrollbar { display: none; }
+.category-chips button { flex-shrink: 0; min-height: 44px; padding: 8px 14px; border: 1px solid var(--color-border); border-radius: 24px; color: var(--color-primary); background: var(--color-surface); font-size: 12px; cursor: pointer; white-space: nowrap; }
+.category-chips .is-selected { color: var(--color-surface); background: var(--color-primary); border-color: var(--color-primary); }
+.advanced-filter-button { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px dashed var(--color-border); padding: 8px 12px; background: var(--color-surface); color: var(--color-primary); font-size: 12px; cursor: pointer; white-space: nowrap; }
+@media (max-width: 767px) { .home-catalog.catalog-section.shop-section { padding: 10px 16px 24px; } .home-category-row { flex-wrap: wrap; gap: 6px; } .category-chips { flex-basis: 100%; } .advanced-filter-button { margin-left: auto; } }
 @media (max-width: 1100px) { .home-header .store-header-main { gap: 12px; } .home-header .support-button span, .home-header .cart-label { display: none; } .home-header .account-menu summary span { max-width: 64px; } }
 @media (max-width: 767px) {
   .home-header .store-header-main { display: flex; justify-content: space-between; gap: 8px; padding: 0 16px; }
