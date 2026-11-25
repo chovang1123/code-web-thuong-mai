@@ -43,8 +43,8 @@ test("category filters every shelf; viewed history and cart operations keep work
   await until(() => d.querySelectorAll(".shelf-track .product-card").length === 4);
   assert.equal(d.querySelectorAll(".category-dropdown [aria-pressed=true]").length, 1);
   assert.equal(d.querySelectorAll(".category-chips [aria-pressed=true]").length, 1);
-  assert.match(d.querySelector(".filter-chip").textContent, /Làm đẹp/);
-  d.querySelector(".filter-chip").click();
+  assert.equal(d.querySelector(".filter-chip"), null);
+  [...d.querySelectorAll(".category-chips button")].find(button => button.textContent === "Tất cả").click();
   await until(() => d.querySelectorAll(".shelf-track .product-card").length === 7);
   d.querySelector('.shelf-track [aria-label="Xem Kem dưỡng"]').click();
   await until(() => d.querySelector(".product-detail"));

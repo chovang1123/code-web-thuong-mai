@@ -28,12 +28,12 @@ export default function HomePage({ products, history = [], cart = [], category, 
   const featured = useMemo(() => featuredProducts(visible), [visible]);
   const clear = () => { setFilters({ ...defaultFilters }); onCategory("Tất cả"); onSearch(""); };
   const chips = [];
-  if (category !== "Tất cả") chips.push({ label: category, remove: () => onCategory("Tất cả") });
   if (search.trim()) chips.push({ label: `Tìm: ${search}`, remove: () => onSearch("") });
   if (filters.minPrice !== "" || filters.maxPrice !== "") chips.push({ label: `${formatPrice(filters.minPrice)} – ${filters.maxPrice === "" ? "Không giới hạn" : formatPrice(filters.maxPrice)}`, remove: () => setFilters({ ...filters, minPrice: "", maxPrice: "" }) });
   if (filters.rating) chips.push({ label: `Từ ${filters.rating} sao`, remove: () => setFilters({ ...filters, rating: 0 }) });
   if (filters.freeShipping) chips.push({ label: "Miễn phí vận chuyển", remove: () => setFilters({ ...filters, freeShipping: false }) });
   if (filters.onSale) chips.push({ label: "Đang giảm giá", remove: () => setFilters({ ...filters, onSale: false }) });
+  const hasFilters = category !== "Tất cả" || chips.length > 0;
   return <div className="home-page" id="shop">
     <h1 className="sr-only">Trang chủ Net Store</h1>
     <CategoryChips products={products} category={category} onCategory={onCategory} onFilters={() => setFiltersOpen(true)} activeCount={chips.length} />
@@ -41,7 +41,7 @@ export default function HomePage({ products, history = [], cart = [], category, 
     {loading || error ? <HomeLoadState loading={loading} error={error} onRetry={onRetry} /> : <>
       <FeaturedHero products={featured} onView={onView} onBuy={onBuy} />
       {shelves.map(shelf => <ProductShelf key={shelf.kind} {...shelf} onView={onView} onAdd={onAdd} onShop={onShop} />)}
-      {!visible.length && <div className="home-empty"><h2>{chips.length ? "Không có sản phẩm phù hợp" : "Cửa hàng chưa có sản phẩm"}</h2><p>{chips.length ? "Thử thay đổi danh mục hoặc khoảng giá." : "Bạn có thể quay lại sau để xem các sản phẩm mới."}</p>{chips.length > 0 && <button type="button" className="secondary-button" onClick={clear}>Xóa bộ lọc</button>}</div>}
+      {!visible.length && <div className="home-empty"><h2>{hasFilters ? "Không có sản phẩm phù hợp" : "Cửa hàng chưa có sản phẩm"}</h2><p>{hasFilters ? "Thử thay đổi danh mục hoặc khoảng giá." : "Bạn có thể quay lại sau để xem các sản phẩm mới."}</p>{hasFilters && <button type="button" className="secondary-button" onClick={clear}>Xóa bộ lọc</button>}</div>}
     </>}
     {filtersOpen && <FilterDrawer products={products} category={category} onCategory={onCategory} filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} resultCount={visible.length} />}
   </div>;
