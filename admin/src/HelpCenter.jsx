@@ -2,12 +2,12 @@ import { createElement, useMemo, useState } from "react";
 import { ChevronDown, CircleHelp, CreditCard, Mail, Phone, RefreshCcw, Search, ShieldCheck, Store, Tag, Truck } from "lucide-react";
 
 const categories = [
-  { icon: Store, title: "Mua sắm cùng Net", color: "#ef6c4d" },
-  { icon: Tag, title: "Khuyến mãi & Ưu đãi", color: "#ef6c4d" },
-  { icon: CreditCard, title: "Thanh toán", color: "#ef6c4d" },
-  { icon: Truck, title: "Đơn hàng & Vận chuyển", color: "#35a89b" },
-  { icon: RefreshCcw, title: "Trả hàng & Hoàn tiền", color: "#ef6c4d" },
-  { icon: ShieldCheck, title: "Thông tin chung", color: "#4d85c5" },
+  { icon: Store, title: "Mua sắm cùng Net" },
+  { icon: Tag, title: "Khuyến mãi & Ưu đãi" },
+  { icon: CreditCard, title: "Thanh toán" },
+  { icon: Truck, title: "Đơn hàng & Vận chuyển" },
+  { icon: RefreshCcw, title: "Trả hàng & Hoàn tiền" },
+  { icon: ShieldCheck, title: "Thông tin chung" },
 ];
 
 const faqs = [
@@ -49,14 +49,14 @@ function HelpCenter() {
       <a className="help-policy" href="#contact">Net Policies</a>
     </header>
     <section className="help-hero">
-      <h1>Xin chào, Net có thể giúp gì cho bạn?</h1>
+      <h1>Trung tâm trợ giúp NET STORE</h1>
       <label className="help-search"><Search size={20}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nhập từ khóa hoặc nội dung cần tìm"/><button aria-label="Tìm kiếm"><Search size={20}/></button></label>
     </section>
     <main className="help-content">
       <div className="help-notice">Mẹo an toàn: Net sẽ không bao giờ yêu cầu bạn cung cấp mật khẩu hoặc mã OTP qua tin nhắn.</div>
       <section className="help-section">
         <h2>Danh mục</h2>
-        <div className="help-categories">{categories.map(({ icon, title, color }) => <button key={title} onClick={() => setSearch(title)}><span style={{ color }}>{createElement(icon, { size: 19 })}</span><b>{title}</b></button>)}</div>
+        <div className="help-categories">{categories.map(({ icon, title }) => <button key={title} onClick={() => setSearch(title)}><span>{createElement(icon, { size: 16 })}</span><b>{title}</b></button>)}</div>
       </section>
       <section className="help-section help-faq-section">
         <div className="help-section-heading"><h2>Câu hỏi thường gặp</h2>{search && <button onClick={() => setSearch("")}>Xóa tìm kiếm</button>}</div>

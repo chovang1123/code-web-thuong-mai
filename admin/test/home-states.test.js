@@ -27,7 +27,7 @@ function boot(t, productRequest, role = "customer") {
   return { w, d: w.document, intervals, calls };
 }
 const products = Array.from({ length: 6 }, (_, index) => ({ _id: String(index), name: `Sản phẩm API ${index}`, category: "Nhà cửa", price: 100000, images: [], stock: 10 }));
-test("loading never renders demo products; real response removes skeleton; reduced motion disables rotation", async t => {
+test("loading never renders demo products; real response removes skeleton; featured banner stays static", async t => {
   let resolve;
   const response = new Promise(done => { resolve = done; });
   const { d, intervals } = boot(t, () => response);
@@ -39,8 +39,11 @@ test("loading never renders demo products; real response removes skeleton; reduc
   assert.ok(!intervals.includes(6000));
   assert.equal(d.querySelector(".product-category-tag"), null);
   assert.match(d.querySelector(".product-stats").textContent, /Mới/);
-  d.querySelectorAll(".featured-option")[1].click();
-  await until(() => d.querySelector(".featured-copy h3").textContent === products[1].name);
+  assert.equal(d.querySelector(".featured-list"), null);
+  assert.equal(d.querySelectorAll(".featured-media").length, 1);
+  assert.ok(products.some(product => product.name === d.querySelector(".featured-copy h3").textContent));
+  d.querySelector(".featured-media").click();
+  await until(() => d.querySelector(".product-detail"));
 });
 test("empty DB remains empty and never exposes generated products", async t => {
   const { d } = boot(t, () => Promise.resolve(Response.json([])));

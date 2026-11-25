@@ -9,14 +9,16 @@ import { defaultFilters, filterProducts } from "../lib/productFilters";
 import { formatPrice } from "../lib/products";
 import { buildHomeShelves, featuredProducts } from "../lib/homeCatalog";
 import { getRecommendations } from "../lib/recommendations";
+import CategoryBreadcrumb from "./CategoryBreadcrumb";
+import { filterFields } from "../lib/categories.js";
 
-export default function HomePage({ products, history = [], cart = [], category, onCategory, search, onSearch, onView, onAdd, onBuy, onShop, loading = false, error = "", onRetry }) {
+export default function HomePage({ products, catalog, history = [], cart = [], category, onCategory, search, onSearch, onView, onAdd, onBuy, onShop, loading = false, error = "", onRetry }) {
   const [filters, setFilters] = useState({ ...defaultFilters });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const visible = useMemo(() => filterProducts(products, { category, search, filters }), [products, category, search, filters]);
   const shelves = useMemo(() => {
     const base = buildHomeShelves(visible, { category, search });
-    if (search.trim()) return base;
+    if (search.trim() || category !== "Tất cả") return base;
     const ids = new Set(visible.map(product => product._id));
     const recommended = getRecommendations(history, products, { cart, limit: products.length }).filter(product => ids.has(product._id)).slice(0, 12);
     const anchor = products.find(product => product._id === history[0]?._id);
@@ -33,16 +35,20 @@ export default function HomePage({ products, history = [], cart = [], category, 
   if (filters.rating) chips.push({ label: `Từ ${filters.rating} sao`, remove: () => setFilters({ ...filters, rating: 0 }) });
   if (filters.freeShipping) chips.push({ label: "Miễn phí vận chuyển", remove: () => setFilters({ ...filters, freeShipping: false }) });
   if (filters.onSale) chips.push({ label: "Đang giảm giá", remove: () => setFilters({ ...filters, onSale: false }) });
+  const facets = filterFields(category);
+  const labels = { nam: "Nam", nu: "Nữ", unisex: "Unisex", ios: "iOS / iPadOS", android: "Android" };
+  for (const key of Object.keys(facets)) if (facets[key] && filters[key]) chips.push({ label: labels[filters[key]] || filters[key], remove: () => setFilters({ ...filters, [key]: "" }) });
   const hasFilters = category !== "Tất cả" || chips.length > 0;
   return <div className="home-page" id="shop">
-    <h1 className="sr-only">Trang chủ Net Store</h1>
-    <CategoryChips products={products} category={category} onCategory={onCategory} onFilters={() => setFiltersOpen(true)} activeCount={chips.length} />
+    <h1 className="sr-only">{category === "Tất cả" ? "Trang chủ Net Store" : category}</h1>
+    <CategoryChips products={products} catalog={catalog} category={category} onCategory={onCategory} onFilters={() => setFiltersOpen(true)} activeCount={chips.length} />
+    <CategoryBreadcrumb category={category} onCategory={onCategory} />
     <div className="home-filter-status"><div className="filter-chips">{chips.map(chip => <button type="button" className="filter-chip" key={chip.label} onClick={chip.remove} aria-label={`Bỏ lọc ${chip.label}`}>{chip.label}<X size={14} /></button>)}{chips.length > 0 && <button type="button" className="clear-filters" onClick={clear}>Xóa tất cả</button>}</div>{chips.length > 0 && <span className="result-count" aria-live="polite">{visible.length} sản phẩm</span>}</div>
     {loading || error ? <HomeLoadState loading={loading} error={error} onRetry={onRetry} /> : <>
       <FeaturedHero products={featured} onView={onView} onBuy={onBuy} />
-      {shelves.map(shelf => <ProductShelf key={shelf.kind} {...shelf} onView={onView} onAdd={onAdd} onShop={onShop} />)}
+      {shelves.map(shelf => <ProductShelf key={`${shelf.kind}-${category}-${search}-${JSON.stringify(filters)}`} {...shelf} onView={onView} onAdd={onAdd} onShop={onShop} />)}
       {!visible.length && <div className="home-empty"><h2>{hasFilters ? "Không có sản phẩm phù hợp" : "Cửa hàng chưa có sản phẩm"}</h2><p>{hasFilters ? "Thử thay đổi danh mục hoặc khoảng giá." : "Bạn có thể quay lại sau để xem các sản phẩm mới."}</p>{hasFilters && <button type="button" className="secondary-button" onClick={clear}>Xóa bộ lọc</button>}</div>}
     </>}
-    {filtersOpen && <FilterDrawer products={products} category={category} onCategory={onCategory} filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} resultCount={visible.length} />}
+    {filtersOpen && <FilterDrawer products={products} catalog={catalog} category={category} onCategory={onCategory} filters={filters} onChange={setFilters} onClose={() => setFiltersOpen(false)} resultCount={visible.length} />}
   </div>;
 }

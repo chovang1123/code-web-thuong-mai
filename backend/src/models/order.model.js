@@ -97,6 +97,9 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    subtotal: { type: Number, min: 0 },
+    couponCode: { type: String, trim: true },
+    discountAmount: { type: Number, min: 0 },
     status: {
       type: String,
       enum: [

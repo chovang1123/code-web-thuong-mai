@@ -22,12 +22,15 @@ import { decorateProduct, formatPrice, productRating, productSold } from "./lib/
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
 import StoreHeader from "./components/StoreHeader";
+import StoreFooter from "./components/StoreFooter";
 import HomePage from "./components/HomePage";
 import { historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
 import CartDrawer, { CartPage } from "./components/CartDrawer";
 import Dialog from "./components/Dialog";
 import { coupons } from "./lib/storeConfig";
 import { checkoutTotals } from "./lib/cartPricing";
+import useCategoryLocation from "./lib/useCategoryLocation";
+import CategoryBreadcrumb from "./components/CategoryBreadcrumb";
 
 
 
@@ -77,7 +80,8 @@ function App() {
   const [productLoading, setProductLoading] = useState(true);
   const [productError, setProductError] = useState("");
   const [productReload, setProductReload] = useState(0);
-  const [category, setCategory] = useState("Tất cả");
+  const [category, setCategory] = useCategoryLocation();
+  const [catalog, setCatalog] = useState([]);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [cart, setCart] = useState(() => loadSavedCart(authEmail));
@@ -233,6 +237,7 @@ function App() {
     const controller = new AbortController();
     let isMounted = true;
     let running = false;
+    fetch(`${apiUrl}/categories`, { signal: controller.signal }).then(response => response.ok ? response.json() : []).then(data => { if (isMounted && Array.isArray(data)) setCatalog(data); }).catch(() => {});
     const loadProducts = async () => {
       if (running) return;
       running = true;
@@ -242,7 +247,7 @@ function App() {
         const data = await response.json();
         if (!Array.isArray(data)) throw new Error("Dữ liệu sản phẩm chưa hợp lệ. Vui lòng thử lại.");
         if (!isMounted) return;
-        const latestProducts = data.filter(product => !["Ăn uống", "Đồ ăn", "Food", "Beverage"].includes(product.category)).map(decorateProduct);
+        const latestProducts = data.map(decorateProduct);
         setProducts(latestProducts);
         setProductError("");
         setSelectedProduct(current => current ? latestProducts.find(product => product._id === current._id) || null : current);
@@ -395,9 +400,9 @@ function App() {
     const response = await fetch(`${apiUrl}/orders/web`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ shippingAddress, paymentMethod, checkoutReference, bankCode, expectedTotal: checkoutTotals(cartTotal, appliedCoupon, paymentMethod).total,
+      body: JSON.stringify({ shippingAddress, paymentMethod, checkoutReference, bankCode, expectedTotal: checkoutTotals(cartTotal, appliedCoupon).total,
         expectedItems: cart.map(item => ({ product: item._id, quantity: item.quantity })),
-        couponCode: paymentMethod === "vnpay" ? Object.keys(coupons).find(code => coupons[code] === appliedCoupon) : undefined }),
+        couponCode: Object.keys(coupons).find(code => coupons[code] === appliedCoupon) }),
     });
     const data = await response.json();
     if (!response.ok) {
@@ -542,21 +547,14 @@ function App() {
     onApplyCoupon: applyCoupon, couponMessage, syncMessage: cartSyncMessage };
   return (
     <div className="storefront">
-      <StoreHeader products={products} user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onLogout={() => {
+      <StoreHeader products={products} catalog={catalog} user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onLogout={() => {
         ["user", "email", "role", "token"].forEach(key => localStorage.removeItem("net_store_" + key));
         setAuthUser(null); setAuthToken("");
       }} />
       <main id="top">
-        <HomePage loading={productLoading} error={productError} onRetry={() => { setProductLoading(true); setProductReload(value => value + 1); }} products={products} history={viewHistory} cart={cart} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
+        <HomePage loading={productLoading} error={productError} onRetry={() => { setProductLoading(true); setProductReload(value => value + 1); }} products={products} catalog={catalog} history={viewHistory} cart={cart} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
       </main>
-      <footer id="contact">
-        <div className="brand">
-          <span className="brand-mark">N</span>
-          <span>NET STORE</span>
-        </div>
-        <p>Đồ dùng tử tế cho nhịp sống hiện đại.</p>
-        <span>© 2026 NET</span>
-      </footer>
+      <StoreFooter />
       {cartOpen && <CartDrawer {...cartProps} onClose={() => setCartOpen(false)} onViewCart={() => { setCartOpen(false); setCartPageOpen(true); }} />}
       {cartPageOpen && <CartPage {...cartProps} onClose={() => setCartPageOpen(false)} />}
 
@@ -580,9 +578,7 @@ function App() {
               <ProductImage product={selectedProduct} />
             </div>
             <div className="detail-content">
-              <p className="breadcrumb">
-                Net Store &gt; {selectedProduct.category}
-              </p>
+              <CategoryBreadcrumb category={selectedProduct.categorySlug || selectedProduct.category} onCategory={value => { setCategory(value); setSelectedProduct(null); }} />
               <h2>{selectedProduct.name}</h2>
               <p className="detail-brand">Thương hiệu: {selectedProduct.brand}</p>
               <div className="detail-rating">
@@ -595,8 +591,8 @@ function App() {
               </div>
               <div className="voucher-list">
                 <p>Voucher của shop</p>
-                <span>NET10 · Giảm 10% qua VNPay</span>
-                <span>WELCOME50 · Giảm 50.000đ qua VNPay</span>
+                <span>NET10 · Giảm 10%</span>
+                <span>WELCOME50 · Giảm 50.000đ</span>
               </div>
               <p className="detail-description">
                 {selectedProduct.description}
@@ -1011,7 +1007,7 @@ function PasswordPanel({ email }) {
     }
   };
 
-  return <><p className="eyebrow">BẢO MẬT TÀI KHOẢN</p><h2>Đổi mật khẩu</h2><p className="profile-subtitle">Cập nhật mật khẩu để bảo vệ tài khoản Net của bạn.</p><div className="profile-divider"/><form className="profile-form password-form" onSubmit={changePassword}><label>Mật khẩu hiện tại<input required type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} placeholder="Nhập mật khẩu hiện tại"/></label><label>Mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} placeholder="Tối thiểu 6 ký tự"/><small>Nên dùng mật khẩu riêng, khó đoán và không dùng lại ở nơi khác.</small></label><label>Xác nhận mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} placeholder="Nhập lại mật khẩu mới"/></label>{message && <p className={message.startsWith("Đã") ? "profile-success" : "auth-error"}>{message}</p>}<button className="profile-save" type="submit" disabled={saving}>{saving ? "Đang lưu..." : "Đổi mật khẩu"}</button></form></>;
+  return <><p className="eyebrow">Bảo mật tài khoản</p><h2>Đổi mật khẩu</h2><p className="profile-subtitle">Cập nhật mật khẩu để bảo vệ tài khoản Net của bạn.</p><div className="profile-divider"/><form className="profile-form password-form" onSubmit={changePassword}><label>Mật khẩu hiện tại<input required type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} placeholder="Nhập mật khẩu hiện tại"/></label><label>Mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} placeholder="Tối thiểu 6 ký tự"/><small>Nên dùng mật khẩu riêng, khó đoán và không dùng lại ở nơi khác.</small></label><label>Xác nhận mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} placeholder="Nhập lại mật khẩu mới"/></label>{message && <p className={message.startsWith("Đã") ? "profile-success" : "auth-error"}>{message}</p>}<button className="profile-save" type="submit" disabled={saving}>{saving ? "Đang lưu..." : "Đổi mật khẩu"}</button></form></>;
 }
 
 function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
@@ -1024,17 +1020,9 @@ function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
           <span>NET STORE</span>
         </a>
         <div className="auth-quote">
-          <p className="eyebrow">MỘT KHỞI ĐẦU ĐẸP</p>
-          <h1>
-            Những điều
-            <br />
-            <em>tử tế bắt đầu</em>
-            <br />
-            từ hôm nay.
-          </h1>
+          <h1>Mua sắm từ các gian hàng trên NET STORE</h1>
           <p>
-            Đăng nhập để lưu sản phẩm yêu thích và tiếp tục hành trình mua sắm
-            của bạn.
+            Lưu sản phẩm yêu thích, quản lý giỏ hàng và theo dõi đơn hàng.
           </p>
         </div>
         <span className="auth-caption">
@@ -1043,10 +1031,7 @@ function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
       </div>
       <div className="auth-panel">
         <div className="auth-panel-inner">
-          <p className="eyebrow">
-            {isRegister ? "TẠO TÀI KHOẢN" : "CHÀO MỪNG TRỞ LẠI"}
-          </p>
-          <h2>{isRegister ? "Bắt đầu hành trình." : "Đăng nhập vào Net."}</h2>
+          <h2>{isRegister ? "Tạo tài khoản" : "Đăng nhập"}</h2>
           <p className="auth-description">
             {isRegister
               ? "Tạo tài khoản để trải nghiệm cửa hàng trọn vẹn hơn."
@@ -1184,7 +1169,7 @@ function PromotionPanel() {
     <>
       <div className="promotion-top">
         <div>
-          <p className="eyebrow">THÔNG BÁO & KHUYẾN MÃI</p>
+          <p className="eyebrow">Thông báo & khuyến mãi</p>
           <h2>Ưu đãi dành cho bạn</h2>
         </div>
         <button>Đánh dấu đã đọc tất cả</button>

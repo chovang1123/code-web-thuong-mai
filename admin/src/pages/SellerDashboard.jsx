@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import "./SellerDashboard.css";
+import ProductCategoryFields from "../components/ProductCategoryFields";
 
 const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 const currency = new Intl.NumberFormat("vi-VN", {
@@ -25,6 +26,7 @@ const initialProductForm = {
   name: "",
   description: "",
   category: "",
+  tags: "", brand: "", gender: "", os: "",
   price: "",
   stock: "",
   image: "",
@@ -93,6 +95,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
             name: product.name || "",
             description: product.description || "",
             category: product.category || "",
+            tags: (product.tags || []).join(", "), brand: product.brand || "", gender: product.gender || "", os: product.os || "",
             price: String(product.price ?? ""),
             stock: String(product.stock ?? ""),
             image: product.images?.[0] || "",
@@ -198,7 +201,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
           <span className="seller-brand-mark">N</span>
           <span>NET <b>SELLER</b></span>
         </a>
-        <p className="seller-nav-caption">MENU CHÍNH</p>
+        <p className="seller-nav-caption">Điều hướng</p>
         <nav className="seller-nav" aria-label="Điều hướng người bán">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
@@ -233,7 +236,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
       <main className="seller-main" id="seller-home">
         <header className="seller-topbar">
           <div>
-            <span className="seller-topbar-eyebrow">KÊNH NGƯỜI BÁN</span>
+            <span className="seller-topbar-eyebrow">Kênh người bán</span>
             <h1>{dashboard?.shop.name || "Gian hàng của bạn"}</h1>
           </div>
           <div className="seller-location">
@@ -254,8 +257,8 @@ function SellerDashboard({ name, email, token, onLogout }) {
                 <section>
                   <div className="seller-page-heading">
                     <div>
-                      <p className="seller-section-kicker">TỔNG QUAN</p>
-                      <h2>Xin chào, {name} <span>👋</span></h2>
+                      <p className="seller-section-kicker">Tổng quan</p>
+                      <h2>Tổng quan gian hàng</h2>
                       <p>Theo dõi hoạt động và hiệu quả kinh doanh của gian hàng.</p>
                     </div>
                     <button className="seller-primary-button" onClick={() => openProductDialog()} type="button">
@@ -274,7 +277,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
                     <section className="seller-panel seller-revenue-panel">
                       <div className="seller-panel-heading">
                         <div>
-                          <p className="seller-section-kicker">HIỆU QUẢ KINH DOANH</p>
+                          <p className="seller-section-kicker">Hiệu quả kinh doanh</p>
                           <h3>Doanh thu 6 tháng gần nhất</h3>
                         </div>
                         <span className="seller-period-chip">6 tháng</span>
@@ -288,7 +291,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
                                 className="seller-chart-bar"
                                 style={{ height: `${Math.max((item.revenue / maxRevenue) * 100, item.revenue ? 8 : 3)}%` }}
                                 title={currency.format(item.revenue)}
-                              />
+                             />
                             </div>
                             <span>{item.label}</span>
                           </div>
@@ -308,7 +311,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
                         <div className="seller-low-stock-list">
                           {products.filter((product) => product.stock <= 5).slice(0, 4).map((product) => (
                             <div className="seller-low-stock-item" key={product._id}>
-                              <img src={product.images?.[0]} alt="" />
+                              <img width="80" height="80" loading="lazy" decoding="async" src={product.images?.[0]} alt="" />
                               <div><strong>{product.name}</strong><span>{product.category}</span></div>
                               <b>{product.stock} còn</b>
                             </div>
@@ -355,7 +358,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
                           <tbody>
                             {products.map((product) => (
                               <tr key={product._id}>
-                                <td><div className="seller-product-cell"><img src={product.images?.[0]} alt="" /><div><strong>{product.name}</strong><span>{product.description}</span></div></div></td>
+                                <td><div className="seller-product-cell"><img width="80" height="80" loading="lazy" decoding="async" src={product.images?.[0]} alt="" /><div><strong>{product.name}</strong><span>{product.description}</span></div></div></td>
                                 <td>{product.category}</td>
                                 <td className="seller-price">{currency.format(product.price)}</td>
                                 <td><span className={`seller-stock ${product.stock <= 5 ? "low" : ""}`}>{product.stock} sản phẩm</span></td>
@@ -431,14 +434,12 @@ function SellerDashboard({ name, email, token, onLogout }) {
             </div>
             <label>Tên sản phẩm<input required maxLength="120" value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Tên sản phẩm" /></label>
             <label>Mô tả<textarea required rows="3" value={productForm.description} onChange={(event) => setProductForm({ ...productForm, description: event.target.value })} placeholder="Mô tả sản phẩm" /></label>
+            <ProductCategoryFields form={productForm} onChange={setProductForm} />
             <div className="seller-form-row">
-              <label>Danh mục<input required value={productForm.category} onChange={(event) => setProductForm({ ...productForm, category: event.target.value })} placeholder="Thời trang" /></label>
               <label>Giá bán (₫)<input required type="number" min="0" step="1000" value={productForm.price} onChange={(event) => setProductForm({ ...productForm, price: event.target.value })} placeholder="250000" /></label>
-            </div>
-            <div className="seller-form-row">
               <label>Số lượng tồn<input required type="number" min="0" step="1" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })} placeholder="20" /></label>
-              <label>Đường dẫn ảnh<input required type="url" value={productForm.image} onChange={(event) => setProductForm({ ...productForm, image: event.target.value })} placeholder="https://…" /></label>
             </div>
+            <label>Đường dẫn ảnh<input required type="url" value={productForm.image} onChange={(event) => setProductForm({ ...productForm, image: event.target.value })} placeholder="https://…" /></label>
             {error && <div className="seller-alert seller-alert-error" role="alert">{error}</div>}
             <div className="seller-modal-actions">
               <button className="seller-secondary-button" onClick={() => setProductDialog(undefined)} type="button">Hủy</button>

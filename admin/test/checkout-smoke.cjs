@@ -15,9 +15,9 @@ async function until(predicate) {
   throw Error("Timed out waiting for storefront");
 }
 
-for (const couponCode of [null, "NET10"]) {
+for (const couponCode of [null, "NET10", "WELCOME50", "FREESHIP"]) {
 for (const method of ["cod", "VNBANK", "INTCARD"]) {
-  for (const addressMode of ["saved", "new", "temporary"]) {
+  for (const addressMode of couponCode && couponCode !== "NET10" ? ["saved"] : ["saved", "new", "temporary"]) {
   test("storefront checkout via " + method + " address " + addressMode + " coupon " + (couponCode || "none"), async t => {
     const dist = path.resolve(__dirname, "../dist");
     const asset = fs.readFileSync(path.join(dist, "index.html"), "utf8").match(/src="\/([^"]+\.js)"/)[1];
@@ -29,7 +29,9 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
     for (const [key, value] of Object.entries({ user: "Test", email: "test@example.test", role: "customer", token: "token" })) {
       w.localStorage.setItem("net_store_" + key, value);
     }
-    const product = { _id: "p1", price: 10000, category: "Test", name: "Test product", images: [], stock: 9 };
+    const price = couponCode === "WELCOME50" || couponCode === "FREESHIP" ? 100000 : 10000;
+    const expectedTotal = couponCode === "NET10" ? 9000 : couponCode === "WELCOME50" ? 50000 : couponCode === "FREESHIP" ? 70000 : price;
+    const product = { _id: "p1", price, category: "Test", name: "Test product", images: [], stock: 9 };
     const items = [{ product, quantity: 1 }];
     const submitted = [];
     let starts = 0;
@@ -103,6 +105,12 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
       }
     }
     await until(() => !element(".place-order-button").disabled);
+    assert.match(element('.order-total').textContent, new RegExp(expectedTotal.toLocaleString('vi-VN').replaceAll('.', '\\.') + 'đ'));
+    if (couponCode && method === "cod") {
+      element('input[value="VNBANK"]').click();
+      await wait(10);
+      assert.match(element('.order-total').textContent, new RegExp(expectedTotal.toLocaleString('vi-VN').replaceAll('.', '\\.') + 'đ'));
+    }
     element('input[value="' + method + '"]').click();
     await wait(10);
     element(".place-order-button").click();
@@ -110,8 +118,8 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
     assert.equal(submitted.length, 1);
     assert.equal(submitted[0].paymentMethod, method === "cod" ? "cod" : "vnpay");
     assert.equal(submitted[0].shippingAddress.fullName, addressMode === "saved" ? "Home Customer" : "123 Test");
-    assert.equal(submitted[0].expectedTotal, couponCode && method !== "cod" ? 9000 : 10000);
-    assert.equal(submitted[0].couponCode, method !== "cod" ? couponCode || undefined : undefined);
+    assert.equal(submitted[0].expectedTotal, expectedTotal);
+    assert.equal(submitted[0].couponCode, couponCode || undefined);
     assert.equal(d.querySelectorAll('.checkout-bottom').length, 0);
     assert.equal(starts, method === "cod" ? 0 : 1);
     if (addressMode === "temporary") { assert.equal(saves, 0); assert.equal(savedAddresses[1].fullName, "Home Customer"); }

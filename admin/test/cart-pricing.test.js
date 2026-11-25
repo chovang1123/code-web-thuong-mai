@@ -7,9 +7,13 @@ test("shipping progress and threshold use configurable values", () => {
   assert.equal(shippingQuote(600000, { freeShippingThreshold: 600000, baseFee: 30000 }).fee, 0);
   assert.equal(shippingQuote(100000).fee, 0);
 });
-test("coupons cap at subtotal; COD and VNPay totals match current server rules", () => {
+test("coupons cap at subtotal and apply equally to COD and VNPay", () => {
   assert.equal(couponDiscount(10000, coupons.WELCOME50), 10000);
   assert.equal(couponDiscount(123456, coupons.NET10), 12346);
-  assert.equal(checkoutTotals(480000, coupons.NET10, "cod").total, 480000);
+  assert.equal(checkoutTotals(480000, coupons.NET10, "cod").total, 432000);
   assert.equal(checkoutTotals(480000, coupons.NET10, "vnpay").total, 432000);
+  assert.equal(checkoutTotals(1425000, coupons.NET10).total, 1282500);
+  assert.equal(checkoutTotals(480000, coupons.WELCOME50).total, 430000);
+  assert.equal(checkoutTotals(480000, coupons.FREESHIP).total, 450000);
+  assert.equal(checkoutTotals(10000, coupons.WELCOME50).total, 0);
 });

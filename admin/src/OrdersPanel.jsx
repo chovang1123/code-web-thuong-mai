@@ -258,7 +258,7 @@ function OrdersPanel({ email, authToken }) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Bạn có thể tìm kiếm theo mã đơn hoặc tên sản phẩm"
-        />
+       />
       </label>
       {syncMessage && (
         <p className="coupon-error" role="alert">
@@ -285,7 +285,7 @@ function OrdersPanel({ email, authToken }) {
                     className="order-item"
                     key={`${order.id}-${item._id}`}
                   >
-                    <img src={item.images?.[0]} alt="" />
+                    <img width="80" height="80" loading="lazy" decoding="async" src={item.images?.[0]} alt="" />
                     <div>
                       <strong>{item.name}</strong>
                       <small>x{item.quantity}</small>
@@ -334,7 +334,7 @@ function OrdersPanel({ email, authToken }) {
                       placeholder="Chia sẻ cảm nhận của bạn về sản phẩm"
                       rows={3}
                       required
-                    />
+                   />
                     {reviewMessage && (
                       <p className="review-message" role="alert">{reviewMessage}</p>
                     )}

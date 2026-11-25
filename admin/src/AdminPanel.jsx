@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Edit3, LogOut, PackagePlus, RefreshCw, Trash2, X } from "lucide-react";
 import { withSellerDetails } from "./lib/marketplace";
+import { productCategories } from "./lib/categories.js";
+import ProductCategoryFields from "./components/ProductCategoryFields";
 
 const emptyForm = {
   name: "",
   description: "",
   price: "",
   stock: "",
-  category: "Nhà cửa",
+  category: "",
+  tags: "", gender: "", os: "",
   brand: "",
   sellerName: "",
   sellerLocation: "",
@@ -75,6 +78,7 @@ export default function AdminPanel({ adminName, email, onLogout }) {
       price: product.price,
       stock: product.stock,
       category: product.category,
+      tags: (product.tags || []).join(", "), gender: product.gender || "", os: product.os || "",
       brand: product.brand || "",
       sellerName: product.sellerName || "",
       sellerLocation: product.sellerLocation || "",
@@ -92,7 +96,7 @@ export default function AdminPanel({ adminName, email, onLogout }) {
       </header>
       <main className="admin-content">
         <div className="admin-title">
-          <div><p className="eyebrow">QUẢN TRỊ CỬA HÀNG</p><h1>Quản lý sản phẩm</h1><p>Thêm, chỉnh sửa và xóa sản phẩm đang hiển thị trên cửa hàng.</p></div>
+          <div><p className="eyebrow">Quản trị cửa hàng</p><h1>Quản lý sản phẩm</h1><p>Thêm, chỉnh sửa và xóa sản phẩm đang hiển thị trên cửa hàng.</p></div>
           <span className="admin-count">{products.length} sản phẩm</span>
         </div>
         <div className="admin-grid">
@@ -107,8 +111,7 @@ export default function AdminPanel({ adminName, email, onLogout }) {
               <label>Giá bán<input required type="number" min="0" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} /></label>
               <label>Tồn kho<input required type="number" min="0" value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} /></label>
             </div>
-            <label>Danh mục<select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}><option>Thời trang</option><option>Phụ kiện</option><option>Nhà cửa</option><option>Công nghệ</option><option>Làm đẹp</option><option>Văn phòng phẩm</option></select></label>
-            <label>Thương hiệu<input required value={form.brand} onChange={(event) => setForm({ ...form, brand: event.target.value })} placeholder="Ví dụ: Net Select" /></label>
+            <ProductCategoryFields form={form} onChange={setForm} />
             <label>Tên shop / người bán<input required value={form.sellerName} onChange={(event) => setForm({ ...form, sellerName: event.target.value })} placeholder="Ví dụ: Nhà Mây Handmade" /></label>
             <label>Khu vực shop<input value={form.sellerLocation} onChange={(event) => setForm({ ...form, sellerLocation: event.target.value })} placeholder="Ví dụ: Thành phố Hồ Chí Minh" /></label>
             <label>URL hình ảnh<input required value={form.image} onChange={(event) => setForm({ ...form, image: event.target.value })} placeholder="https://..." /></label>
@@ -122,8 +125,8 @@ export default function AdminPanel({ adminName, email, onLogout }) {
               {!isLoading && products.length === 0 && !message && <p className="admin-empty">Chưa có sản phẩm nào trong cửa hàng.</p>}
               {products.map((product) => (
                 <article className="admin-product" key={product._id}>
-                  <img src={product.images?.[0]} alt="" />
-                  <div><strong>{product.name}</strong><small>{product.category} · {Number(product.price).toLocaleString("vi-VN")}đ · Kho {product.stock}</small><small>Shop: {product.sellerName || "Net Market"} · {product.brand || "Net Select"}</small></div>
+                  <img width="80" height="80" loading="lazy" decoding="async" src={product.images?.[0]} alt="" />
+                  <div><strong>{product.name}</strong><small>{productCategories(product).join(" · ")} · {Number(product.price).toLocaleString("vi-VN")}đ · Kho {product.stock}</small><small>Shop: {product.sellerName || "Net Market"} · {product.brand || "Net Select"}</small></div>
                   <button onClick={() => editProduct(product)} aria-label="Sửa"><Edit3 size={16} /></button>
                   <button className="delete-product" onClick={() => deleteProduct(product._id)} aria-label="Xóa"><Trash2 size={16} /></button>
                 </article>

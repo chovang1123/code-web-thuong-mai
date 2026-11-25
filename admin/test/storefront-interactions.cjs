@@ -39,9 +39,11 @@ test("category filters every shelf; viewed history and cart operations keep work
   w.eval(fs.readFileSync(path.join(dist, asset), "utf8"));
   await until(() => d.querySelectorAll(".shelf-track .product-card").length === 7);
   d.querySelector(".category-menu").open = true;
-  [...d.querySelectorAll(".category-dropdown button")].find(button => button.textContent === "Làm đẹp").click();
+  d.querySelector('.category-dropdown a[href="/danh-muc/lam-dep"]').click();
   await until(() => d.querySelectorAll(".shelf-track .product-card").length === 4);
-  assert.equal(d.querySelectorAll(".category-dropdown [aria-pressed=true]").length, 1);
+  assert.equal(w.location.pathname, "/danh-muc/lam-dep");
+  assert.match(d.title, /Làm đẹp/);
+  assert.equal(d.querySelectorAll('.category-group-desktop [aria-current="page"]').length, 1);
   assert.equal(d.querySelectorAll(".category-chips [aria-pressed=true]").length, 1);
   assert.equal(d.querySelector(".filter-chip"), null);
   [...d.querySelectorAll(".category-chips button")].find(button => button.textContent === "Tất cả").click();

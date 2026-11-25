@@ -199,4 +199,48 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
     assert.equal((await Order.findById(placed.order._id)).shippingAddress.streetAddress, saved.streetAddress);
   });
 
+  await t.test("voucher cho COD/VNPay, số tiền lưu và hoàn kho khi không hợp lệ", async () => {
+    const original = await Product.findById(product.id);
+    const originalSession = Order.startSession;
+    await Product.updateOne({ _id: product.id }, { price: 1425000, stock: 100 });
+    try {
+      for (const standalone of [false, true]) {
+        if (standalone) Order.startSession = async () => ({ withTransaction: async () => { throw Object.assign(new Error("Transactions not supported"), { code: 20 }); }, endSession: async () => {} });
+        for (const paymentMethod of standalone ? ["cod"] : ["cod", "vnpay"]) {
+          for (const [couponCode, totalPrice, discountAmount] of [[undefined, 1425000, 0], ["NET10", 1282500, 142500], ["WELCOME50", 1375000, 50000], ["FREESHIP", 1395000, 30000]]) {
+            const response = await checkout({ paymentMethod, couponCode, expectedTotal: totalPrice });
+            assert.equal(response.status, 201);
+            const { order } = await response.json();
+            const saved = await Order.findById(order._id);
+            assert.equal(saved.totalPrice, totalPrice);
+            assert.equal(saved.subtotal, 1425000);
+            assert.equal(saved.discountAmount, discountAmount);
+            assert.equal(saved.couponCode, couponCode);
+            assert.equal(saved.paymentMethod, paymentMethod);
+          }
+          for (const invalid of [{ couponCode: "NET10", expectedTotal: 1 }, { couponCode: "INVALID" }, { couponCode: { value: 100 } }]) {
+            const beforeStock = await stock(), beforeOrders = await Order.countDocuments();
+            assert.equal((await checkout({ paymentMethod, ...invalid })).status, 400);
+            assert.equal(await stock(), beforeStock);
+            assert.equal(await Order.countDocuments(), beforeOrders);
+            assert.equal((await Cart.findById(cart.id)).items.length, 1);
+          }
+        }
+        await Product.updateOne({ _id: product.id }, { price: 4000 });
+        const free = await checkout({ couponCode: "WELCOME50", expectedTotal: 0 });
+        assert.equal(free.status, 201);
+        assert.equal((await free.json()).order.totalPrice, 0);
+        await Product.updateOne({ _id: product.id }, { price: 1425000 });
+        Order.startSession = originalSession;
+      }
+      const discounted = await (await checkout({ paymentMethod: "vnpay", couponCode: "NET10", expectedTotal: 1282500 })).json();
+      const changed = await request(base + "/orders/" + discounted.order._id + "/payment-method", { method: "PATCH", headers: { Authorization: "Bearer " + createWebAuthToken(user.id), "Content-Type": "application/json" }, body: JSON.stringify({ paymentMethod: "cod" }) });
+      assert.equal(changed.status, 200);
+      const converted = await Order.findById(discounted.order._id);
+      assert.equal(converted.totalPrice, 1282500); assert.equal(converted.discountAmount, 142500); assert.equal(converted.couponCode, "NET10");
+    } finally {
+      Order.startSession = originalSession;
+      await Product.updateOne({ _id: product.id }, { price: original.price, stock: original.stock });
+    }
+  });
 });

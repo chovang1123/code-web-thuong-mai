@@ -4,6 +4,7 @@ import { Order } from "../models/order.model.js";
 import { Product } from "../models/product.model.js";
 import { Review } from "../models/review.model.js";
 import { Cart } from "../models/cart.model.js";
+import { priceWebOrder } from "../services/order-pricing.js";
 
 function isTransactionUnsupported(error) {
   return (
@@ -15,7 +16,7 @@ function isTransactionUnsupported(error) {
   );
 }
 
-async function createWebOrderWithoutTransactions(user, shippingAddress) {
+async function createWebOrderWithoutTransactions(user, shippingAddress, pricingOptions) {
   const cart = await Cart.findOne({ user: user._id });
   if (!cart?.items.length) {
     const error = new Error("Giỏ hàng đang trống.");
@@ -66,7 +67,7 @@ async function createWebOrderWithoutTransactions(user, shippingAddress) {
         phoneNumber: shippingAddress.phoneNumber.trim(),
       },
       paymentResult: { status: "unpaid" },
-      totalPrice,
+      ...priceWebOrder(totalPrice, { ...pricingOptions, paymentMethod: "cod" }),
     });
 
     cart.items = [];
@@ -214,16 +215,7 @@ export async function createWebOrder(req, res) {
           });
         }
 
-        if (online) {
-          if (couponCode === "NET10") totalPrice -= Math.round(totalPrice * 0.1);
-          if (couponCode === "WELCOME50") totalPrice = Math.max(0, totalPrice - 50000);
-          if (couponCode === "FREESHIP") totalPrice = Math.max(0, totalPrice - 30000);
-          if (!Number.isSafeInteger(totalPrice) || totalPrice < 5000 ||
-              totalPrice > 999999999 ||
-              (expectedTotal !== undefined && expectedTotal !== totalPrice)) {
-            throw Object.assign(new Error("Tổng tiền đã thay đổi hoặc nằm ngoài hạn mức. Vui lòng kiểm tra lại giỏ hàng."), { statusCode: 400 });
-          }
-        }
+        const pricing = priceWebOrder(totalPrice, { couponCode, expectedTotal, paymentMethod });
         const [order] = await Order.create(
           [
             {
@@ -245,7 +237,7 @@ export async function createWebOrder(req, res) {
               paymentChannel: online ? bankChannel(req.body.bankCode) : undefined,
               expiresAt: online ? new Date(Date.now() + 15 * 60_000) : undefined,
               paymentResult: { status: online ? "pending" : "unpaid" },
-              totalPrice,
+              ...pricing,
             },
           ],
           { session },
@@ -261,6 +253,7 @@ export async function createWebOrder(req, res) {
       createdOrder = await createWebOrderWithoutTransactions(
         req.user,
         shippingAddress,
+        { couponCode, expectedTotal },
       );
     }
 

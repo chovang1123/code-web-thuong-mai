@@ -1,13 +1,16 @@
 import { isFreeShipping, productDiscount, productRating, productSold } from "./products.js";
+import { inCategory, productCategories, filterFields } from "./categories.js";
 
-export const defaultFilters = { minPrice: "", maxPrice: "", rating: 0, freeShipping: false, onSale: false };
+export const defaultFilters = { minPrice: "", maxPrice: "", rating: 0, freeShipping: false, onSale: false, gender: "", brand: "", os: "" };
 export const normalizeText = value => String(value || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d");
 
 export function filterProducts(products, { category = "Tất cả", search = "", filters = defaultFilters, tab = "featured", sort = "relevant" } = {}) {
   const query = normalizeText(search.trim());
+  const facets = filterFields(category);
   const result = products.filter(product =>
-    (category === "Tất cả" || product.category === category) &&
-    normalizeText(`${product.name} ${product.description || ""} ${product.category} ${product.brand || ""} ${product.sellerName || ""}`).includes(query) &&
+    (category === "Tất cả" || inCategory(product, category)) &&
+    normalizeText(`${product.name} ${product.description || ""} ${productCategories(product).join(" ")} ${(product.tags || []).join(" ").replaceAll("-", " ")} ${product.brand || ""} ${product.sellerName || ""}`).includes(query) &&
+    Object.keys(facets).every(key => !facets[key] || !filters[key] || product[key] === filters[key]) &&
     (filters.minPrice === "" || product.price >= Number(filters.minPrice)) &&
     (filters.maxPrice === "" || product.price <= Number(filters.maxPrice)) &&
     productRating(product) >= Number(filters.rating || 0) &&
