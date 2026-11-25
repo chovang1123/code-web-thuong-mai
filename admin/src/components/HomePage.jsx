@@ -7,12 +7,23 @@ import FeaturedHero from "./FeaturedHero";
 import { defaultFilters, filterProducts } from "../lib/productFilters";
 import { formatPrice } from "../lib/products";
 import { buildHomeShelves, featuredProducts } from "../lib/homeCatalog";
+import { getRecommendations } from "../lib/recommendations";
 
-export default function HomePage({ products, category, onCategory, search, onSearch, onView, onAdd, onBuy, onShop }) {
+export default function HomePage({ products, history = [], cart = [], category, onCategory, search, onSearch, onView, onAdd, onBuy, onShop }) {
   const [filters, setFilters] = useState({ ...defaultFilters });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const visible = useMemo(() => filterProducts(products, { category, search, filters }), [products, category, search, filters]);
-  const shelves = useMemo(() => buildHomeShelves(visible, { category, search }), [visible, category, search]);
+  const shelves = useMemo(() => {
+    const base = buildHomeShelves(visible, { category, search });
+    if (search.trim()) return base;
+    const ids = new Set(visible.map(product => product._id));
+    const recommended = getRecommendations(history, products, { cart, limit: products.length }).filter(product => ids.has(product._id)).slice(0, 12);
+    const anchor = products.find(product => product._id === history[0]?._id);
+    if (recommended.length < 3 || !anchor) return base;
+    const position = base.findIndex(shelf => !["weekly", "discounts"].includes(shelf.kind));
+    const index = position < 0 ? base.length : position;
+    return [...base.slice(0, index), { kind: "recommendations", title: "Gợi ý cho bạn", subtitle: `Vì bạn đã xem ${anchor.name}`, products: recommended }, ...base.slice(index)];
+  }, [visible, category, search, products, history, cart]);
   const featured = useMemo(() => featuredProducts(visible), [visible]);
   const clear = () => { setFilters({ ...defaultFilters }); onCategory("Tất cả"); onSearch(""); };
   const chips = [];

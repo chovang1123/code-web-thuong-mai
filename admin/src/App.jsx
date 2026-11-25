@@ -560,7 +560,7 @@ function App() {
         setAuthUser(null); setAuthToken("");
       }} />
       <main id="top">
-        <HomePage products={products} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
+        <HomePage products={products} history={viewHistory} cart={cart} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
       </main>
       <footer id="contact">
         <div className="brand">
