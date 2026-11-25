@@ -19,7 +19,6 @@ import VoucherPanel from "./VoucherPanel";
 import AdvertisingSection from "./AdvertisingSection";
 import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
-import { fallbackProducts } from "./lib/catalog";
 import { decorateProduct, formatPrice, productRating } from "./lib/products";
 import SellerDashboard from "./pages/SellerDashboard";
 import ProductImage from "./components/ProductImage";
@@ -33,7 +32,6 @@ import { coupons } from "./lib/storeConfig";
 import { checkoutTotals } from "./lib/cartPricing";
 
 
-const demoFallbackProducts = fallbackProducts.map(decorateProduct);
 
 const cartStorageKey = (email) =>
   `net_store_cart_${email?.trim().toLowerCase() || "guest"}`;
@@ -77,9 +75,7 @@ function App() {
     shopLocation: "",
   });
   const [authError, setAuthError] = useState("");
-  const [products, setProducts] = useState(
-    fallbackProducts.map(decorateProduct),
-  );
+  const [products, setProducts] = useState([]);
   const [category, setCategory] = useState("Tất cả");
   const [catalogTab, setCatalogTab] = useState("featured");
   const [search, setSearch] = useState("");
@@ -526,7 +522,6 @@ function App() {
       <AdminPanel
         adminName={authUser}
         email={authEmail}
-        fallbackProducts={demoFallbackProducts}
         onLogout={() => {
           localStorage.removeItem("net_store_user");
           localStorage.removeItem("net_store_email");
@@ -563,7 +558,7 @@ function App() {
     onApplyCoupon: applyCoupon, couponMessage, syncMessage: cartSyncMessage };
   return (
     <div className="storefront">
-      <StoreHeader user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onSale={() => { setCategory("Tất cả"); setSearch(""); setCatalogTab("sale"); }} onLogout={() => {
+      <StoreHeader products={products} user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onSale={() => { setCategory("Tất cả"); setSearch(""); setCatalogTab("sale"); }} onLogout={() => {
         ["user", "email", "role", "token"].forEach(key => localStorage.removeItem("net_store_" + key));
         setAuthUser(null); setAuthToken("");
       }} />

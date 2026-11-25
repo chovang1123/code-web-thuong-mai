@@ -34,9 +34,10 @@ test("header, sidebar and chips share one category; drawer updates quantities an
   const asset = fs.readFileSync(path.join(dist, "index.html"), "utf8").match(/src="\/([^"]+\.js)"/)[1];
   w.eval(fs.readFileSync(path.join(dist, asset), "utf8"));
   await until(() => d.querySelectorAll(".catalog-grid .product-card").length === 3);
-  [...d.querySelectorAll(".store-category-links button")].find(button => button.textContent === "Làm đẹp").click();
+  d.querySelector(".category-menu").open = true;
+  [...d.querySelectorAll(".category-dropdown button")].find(button => button.textContent === "Làm đẹp").click();
   await until(() => d.querySelectorAll(".catalog-grid .product-card").length === 2);
-  assert.equal(d.querySelectorAll(".store-category-links [aria-pressed=true]").length, 1);
+  assert.equal(d.querySelectorAll(".category-dropdown [aria-pressed=true]").length, 1);
   assert.equal(d.querySelectorAll(".desktop-filters input[type=checkbox]:checked").length, 1);
   assert.match(d.querySelector(".filter-chip").textContent, /Làm đẹp/);
   d.querySelector(".filter-chip").click();

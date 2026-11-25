@@ -14,7 +14,7 @@ const emptyForm = {
   image: "",
 };
 
-export default function AdminPanel({ adminName, email, fallbackProducts, onLogout }) {
+export default function AdminPanel({ adminName, email, onLogout }) {
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -42,19 +42,7 @@ export default function AdminPanel({ adminName, email, fallbackProducts, onLogou
         return data;
       };
 
-      let data = await fetchProducts();
-      if (data.length === 0) {
-        const seedResponse = await fetch(`${apiUrl}/web-admin/products/seed`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(fallbackProducts),
-        });
-        const seedResult = await seedResponse.json();
-        if (!seedResponse.ok) {
-          throw new Error(seedResult.message || "Không thể khởi tạo sản phẩm mẫu.");
-        }
-        data = await fetchProducts();
-      }
+      const data = await fetchProducts();
 
       setProducts(data.map(withSellerDetails));
       setLoadMessage(data.length === 0 ? "Kho hàng hiện chưa có sản phẩm." : "");
@@ -67,7 +55,7 @@ export default function AdminPanel({ adminName, email, fallbackProducts, onLogou
     } finally {
       setIsLoading(false);
     }
-  }, [apiUrl, fallbackProducts, headers]);
+  }, [apiUrl, headers]);
   useEffect(() => { loadProducts(); }, [loadProducts]);
 
   const saveProduct = async (event) => {
