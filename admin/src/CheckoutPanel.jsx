@@ -1,46 +1,70 @@
-import { useState } from "react";
-import { ArrowLeft, Check, ChevronRight, MapPin, ShieldCheck, Truck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, LockKeyhole, ShieldCheck, Truck } from "lucide-react";
+import CheckoutAddress from "./CheckoutAddress";
+import ProductImage from "./components/ProductImage";
+import VoucherInput from "./components/VoucherInput";
+import { channels } from "./lib/payment";
+import { formatPrice } from "./lib/products";
+import { checkoutTotals } from "./lib/cartPricing";
+import { estimatedDelivery, isValidAddress } from "./lib/checkout";
 
-const formatPrice = (price) => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(price);
-
-function CheckoutPanel({ cart, total, discount, onBack, onComplete, onSubmitOrder }) {
-  const [form, setForm] = useState({ fullName: "", phone: "", address: "", city: "" });
-  const [voucher, setVoucher] = useState("");
+export default function CheckoutPanel({ authToken, authEmail, cart, coupon, couponCode, couponInput, onCouponInput, onApplyCoupon, couponMessage, onBack, onComplete, onSubmitOrder }) {
+  const [shippingAddress, setShippingAddress] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [channel, setChannel] = useState("VNBANK");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const checkoutReference = useRef(null);
+  const submitLock = useRef(false);
+  const [methods, setMethods] = useState(null);
+  const noteKey = `net_store_checkout_note_${authEmail || "guest"}`;
+  const [note, setNote] = useState(() => { try { return localStorage.getItem(noteKey) || ""; } catch { return ""; } });
+  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totals = checkoutTotals(subtotal, coupon);
+  const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const minimumOnlineAmount = methods?.vnpayMinAmount || 10000;
+  const onlineAmountValid = paymentMethod !== "vnpay" || (totals.total >= minimumOnlineAmount && totals.total <= 999999999 && Number.isSafeInteger(totals.total));
 
-  const submitOrder = async (event) => {
+  useEffect(() => {
+    const controller = new AbortController();
+    const api = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    fetch(api + "/payments/methods", { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (!controller.signal.aborted) setMethods(data); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  const submitOrder = async event => {
     event.preventDefault();
+    if (submitLock.current || !cart.length || !isValidAddress(shippingAddress) || !onlineAmountValid || methods?.[paymentMethod] === false || (paymentMethod === "vnpay" && methods?.vnpay !== true)) return;
+    submitLock.current = true;
     setSubmitting(true);
     setMessage("");
     try {
-      await onSubmitOrder({
-        fullName: form.fullName,
-        phoneNumber: form.phone,
-        streetAddress: form.address,
-        city: form.city,
-      });
-      onComplete();
-    } catch (error) {
-      setMessage(error.message || "Không thể đặt hàng.");
-    } finally {
-      setSubmitting(false);
-    }
+      if (paymentMethod !== "cod" && !checkoutReference.current) checkoutReference.current = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, "0")).join("");
+      await onSubmitOrder(shippingAddress, paymentMethod, checkoutReference.current, paymentMethod === "vnpay" ? channel : undefined);
+      try { localStorage.removeItem(noteKey); } catch { /* Optional local draft. */ }
+      if (paymentMethod === "cod") onComplete();
+    } catch (error) { setMessage(error.message || "Không thể đặt hàng."); }
+    finally { submitLock.current = false; setSubmitting(false); }
   };
 
-  return <div className="checkout-page">
-    <header className="checkout-header"><button onClick={onBack} aria-label="Quay lại"><ArrowLeft size={22} /></button><h1>Thanh toán</h1><span /></header>
-    <form className="checkout-content" onSubmit={submitOrder}>
-      <section className="checkout-card checkout-address"><div className="checkout-card-title"><h2><MapPin size={19} /> Địa chỉ nhận hàng</h2><button type="button">Chọn địa chỉ <ChevronRight size={17} /></button></div><div className="checkout-fields"><input required value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} placeholder="Họ và tên" /><input required type="tel" value={form.phone} onChange={(event) => setForm({ ...form, phone: event.target.value })} placeholder="Số điện thoại" /><input required value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} placeholder="Tỉnh/Thành phố, Quận/Huyện" /><textarea required value={form.address} onChange={(event) => setForm({ ...form, address: event.target.value })} placeholder="Địa chỉ cụ thể" rows="2" /></div></section>
-      <section className="checkout-card"><div className="checkout-card-title"><h2>Sản phẩm</h2><span>{cart.length} sản phẩm</span></div><div className="checkout-items">{cart.map((item) => <div className="checkout-item" key={item._id}><img src={item.images?.[0]} alt={item.name} /><div><strong>{item.name}</strong><small>{item.category} · x{item.quantity}</small></div><b>{formatPrice(item.price * item.quantity)}</b></div>)}</div></section>
-      <section className="checkout-card checkout-row"><div><h2>Voucher của Shop</h2><p>Chọn hoặc nhập mã giảm giá</p></div><div className="checkout-voucher"><input value={voucher} onChange={(event) => setVoucher(event.target.value)} placeholder="Nhập mã voucher" /><button type="button" onClick={() => setMessage(voucher ? `Mã ${voucher.toUpperCase()} sẽ được kiểm tra khi đặt hàng.` : "Nhập mã voucher trước khi áp dụng.")}>Áp dụng</button></div></section>
-      {message && <p className="checkout-message" role="alert">{message}</p>}
-      <section className="checkout-card checkout-row"><div><h2><Truck size={19} /> Phương thức vận chuyển</h2><p>Giao hàng tiêu chuẩn</p></div><strong>Miễn phí</strong></section>
-      <section className="checkout-card"><div className="checkout-card-title"><h2>Phương thức thanh toán</h2><span>Đã chọn</span></div><label className="payment-option"><span><span className="cash-icon">₫</span><span><b>Thanh toán khi nhận hàng</b><small>Thanh toán bằng tiền mặt khi nhận được hàng</small></span></span><input type="radio" checked readOnly /></label></section>
-      <section className="checkout-card checkout-summary"><h2>Chi tiết thanh toán</h2><p><span>Tổng tiền hàng</span><b>{formatPrice(total + discount)}</b></p><p><span>Tổng tiền phí vận chuyển</span><b>Miễn phí</b></p>{discount > 0 && <p className="checkout-saving"><span>Ưu đãi sản phẩm</span><b>-{formatPrice(discount)}</b></p>}<p className="checkout-total"><span>Tổng thanh toán</span><strong>{formatPrice(total)}</strong></p></section>
+  return <div className="checkout-page net-checkout">
+    <header className="checkout-header"><div className="checkout-brand"><button type="button" onClick={onBack} aria-label="Quay lại"><ArrowLeft size={20} /></button><a className="brand" href="#shop" onClick={event => { event.preventDefault(); onBack(); }}><img width="80" height="80" loading="lazy" decoding="async" src="/net-store-logo.png" alt="" className="brand-logo" /><span>NET STORE</span></a></div><nav className="checkout-steps" aria-label="Tiến trình đặt hàng"><button type="button" onClick={onBack}>Giỏ hàng</button><span aria-hidden="true">›</span><strong aria-current="step">Thanh toán</strong><span aria-hidden="true">›</span><span>Hoàn tất</span></nav><span className="checkout-secure"><LockKeyhole size={14} />Thanh toán bảo mật</span></header>
+    <h1 className="sr-only">Thanh toán</h1>
+    <form className="checkout-content checkout-layout" onSubmit={submitOrder}>
+      <div className="checkout-main">
+        <CheckoutAddress authToken={authToken} onChange={setShippingAddress} disabled={submitting} />
+        <section className="checkout-card"><h2>Sản phẩm</h2><div className="checkout-items">{cart.map(item => <article className="checkout-item" key={item._id}><ProductImage product={item} /><div><strong>{item.name}</strong><small>{item.sellerName || "Net Market"} · Số lượng: {item.quantity}</small></div><span className="checkout-line-price">{formatPrice(item.price * item.quantity)}</span></article>)}</div><label className="checkout-note" htmlFor="shop-note">Ghi chú cho shop <span>(lưu tạm trên thiết bị)</span><textarea id="shop-note" rows="2" maxLength="500" value={note} disabled={submitting} onChange={event => { setNote(event.target.value); try { localStorage.setItem(noteKey, event.target.value); } catch { /* Optional local draft. */ } }} placeholder="Ghi chú cho shop (không bắt buộc)" /></label></section>
+        <section className="checkout-card"><h2>Vận chuyển</h2><div className="delivery-option"><Truck size={20} aria-hidden="true" /><div><strong>Giao tiêu chuẩn</strong><p>Nhận hàng dự kiến {estimatedDelivery()}</p></div><span>{totals.shipping === 0 ? "Miễn phí" : "Theo phí bên phải"}</span></div></section>
+        <section className="checkout-card"><fieldset className="payment-methods"><legend>Phương thức thanh toán</legend>{[["cod", "Thanh toán khi nhận hàng"], ...channels].map(([value]) => {
+          const cod = value === "cod";
+          const unavailable = cod ? methods?.cod === false : methods?.vnpay !== true;
+          return <label className={`payment-option ${unavailable ? "is-unavailable" : ""}`} key={value}><input type="radio" name="paymentMethod" value={value} checked={paymentMethod === "cod" ? cod : value === channel} disabled={submitting || unavailable} onChange={() => { setPaymentMethod(cod ? "cod" : "vnpay"); setChannel(value); setMessage(""); }} /><span className="payment-badge">{cod ? "COD" : value === "VNBANK" ? "VNPay · ATM" : "VNPay · Visa"}</span><span>{cod ? "Thanh toán khi nhận hàng" : value === "VNBANK" ? "Thẻ ATM nội địa / tài khoản ngân hàng" : "Thẻ quốc tế Visa / Mastercard"}{unavailable && <small>{methods ? "Hiện chưa khả dụng" : "Đang kiểm tra kết nối"}</small>}</span></label>;
+        })}</fieldset>{!onlineAmountValid && <p role="alert" className="checkout-message">Tổng thanh toán VNPay cần từ {formatPrice(minimumOnlineAmount)} đến 999.999.999đ. Bạn có thể chọn COD.</p>}</section>
+      </div>
+      <aside className="checkout-card checkout-summary order-summary" aria-label="Tóm tắt đơn hàng"><h2>Đơn hàng</h2><details className="checkout-voucher-picker"><summary>Chọn hoặc nhập voucher{couponCode ? ` · ${couponCode}` : ""}</summary><VoucherInput id="checkout-voucher" value={couponInput} onChange={onCouponInput} onApply={onApplyCoupon} message={couponMessage} appliedCode={couponCode} disabled={submitting} /></details><dl className="order-amounts"><div><dt>Tiền hàng ({count})</dt><dd>{formatPrice(totals.subtotal)}</dd></div><div><dt>Phí vận chuyển</dt><dd>{formatPrice(totals.shipping)}</dd></div><div><dt>Voucher</dt><dd>{totals.discount > 0 ? `−${formatPrice(totals.discount)}` : "Chưa áp dụng"}</dd></div><div className="order-total"><dt>Tổng thanh toán</dt><dd>{formatPrice(totals.total)}</dd></div></dl>{message && <p className="checkout-message" role="alert">{message}</p>}<button type="submit" className="primary-button place-order-button" disabled={submitting || !cart.length || !shippingAddress || !onlineAmountValid || methods?.[paymentMethod] === false || (paymentMethod === "vnpay" && methods?.vnpay !== true)}>{submitting ? "Đang đặt hàng..." : "Đặt hàng"}</button><p className="checkout-trust"><ShieldCheck size={15} aria-hidden="true" />Thông tin được bảo mật</p><p className="checkout-trust">Kiểm tra kỹ địa chỉ trước khi đặt hàng.</p></aside>
     </form>
-    <div className="checkout-bottom"><div><span>Tổng cộng</span><strong>{formatPrice(total)}</strong>{discount > 0 && <small>Tiết kiệm {formatPrice(discount)}</small>}</div><button disabled={submitting} onClick={() => document.querySelector(".checkout-content")?.requestSubmit()}><ShieldCheck size={17} /> {submitting ? "Đang đặt hàng..." : "Đặt hàng"}</button></div>
   </div>;
 }
-
-export default CheckoutPanel;

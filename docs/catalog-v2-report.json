@@ -1,0 +1,1288 @@
+{
+  "version": "catalog-v2",
+  "beforeProducts": 1023,
+  "afterProducts": 1023,
+  "activeCategories": 50,
+  "productChanges": 1023,
+  "categoryChanges": 75,
+  "oldSlugMap": {
+    "lam-dep": "lam-dep",
+    "noi-that": "nha-cua-noi-that",
+    "nha-cua": "nha-cua-noi-that",
+    "nha-bep": "nha-bep",
+    "cong-nghe": "cong-nghe",
+    "thoi-trang": "thoi-trang",
+    "phu-kien": "phu-kien",
+    "the-thao": "the-thao",
+    "thu-cung": "thu-cung",
+    "thuc-pham": "thuc-pham-do-uong",
+    "mascara": "trang-diem-mat",
+    "phan-mat": "trang-diem-mat",
+    "phan-phu": "trang-diem-khuon-mat",
+    "son-moi": "son-moi",
+    "cham-soc-mong": "cham-soc-mong",
+    "nuoc-hoa-unisex": "nuoc-hoa",
+    "nuoc-hoa-nu": "nuoc-hoa",
+    "giuong-ngu": "giuong-ban-dau-giuong",
+    "sofa": "sofa",
+    "ban-dau-giuong": "giuong-ban-dau-giuong",
+    "ghe-van-phong": "ghe-van-phong",
+    "tu-phong-tam": "tu-phong-tam",
+    "khung-anh": "khung-anh-do-trang-tri",
+    "cay-chau-trang-tri": "cay-chau",
+    "den-ban": "den-ban",
+    "do-trang-tri": "khung-anh-do-trang-tri",
+    "noi-chao": "noi-chao",
+    "dung-cu-nau-an": "dung-cu-nau-an",
+    "ly-coc": "ly-coc",
+    "dia-khay": "dia-khay",
+    "hop-ke-bep": "hop-ke-bep",
+    "dien-gia-dung": "do-dien-nha-bep",
+    "laptop": "laptop",
+    "ao-nam": "ao-nam",
+    "giay-the-thao-nam": "giay-the-thao-nam",
+    "dong-ho-nam": "dong-ho",
+    "tai-nghe": "tai-nghe-loa",
+    "loa-thong-minh": "tai-nghe-loa",
+    "sac-pin": "sac-pin-du-phong",
+    "op-dien-thoai": "op-phu-kien-dien-thoai",
+    "phu-kien-quay-chup": "phu-kien-quay-chup",
+    "dong-ho-thong-minh": "dong-ho-thong-minh",
+    "cham-soc-co-the": "cham-soc-co-the",
+    "iphone": "dien-thoai",
+    "dien-thoai-android": "dien-thoai",
+    "bong-the-thao": "bong-the-thao",
+    "dung-cu-the-thao": "dung-cu-the-thao",
+    "kinh-mat": "kinh-mat",
+    "may-tinh-bang": "may-tinh-bang",
+    "vay-dam": "vay-dam",
+    "bo-do-nu": "bo-do-nu",
+    "tui-xach-nu": "tui-xach-ba-lo",
+    "balo": "tui-xach-ba-lo",
+    "bong-tai": "trang-suc",
+    "giay-cao-got": "giay-cao-got",
+    "dep-nu": "dep-nu",
+    "dong-ho-nu": "dong-ho",
+    "thuc-an-thu-cung": "thu-cung",
+    "giay-ve-sinh": "giay-ve-sinh-nha-cua",
+    "ca-phe": "thuc-pham-do-uong",
+    "legacy-041ed9be3864": "van-phong-pham"
+  },
+  "beforeCounts": [
+    {
+      "name": "Làm đẹp",
+      "slug": "lam-dep",
+      "primary": 3
+    },
+    {
+      "name": "Nội thất",
+      "slug": "noi-that",
+      "primary": 0
+    },
+    {
+      "name": "Nhà cửa",
+      "slug": "nha-cua",
+      "primary": 5
+    },
+    {
+      "name": "Nhà bếp",
+      "slug": "nha-bep",
+      "primary": 0
+    },
+    {
+      "name": "Công nghệ",
+      "slug": "cong-nghe",
+      "primary": 3
+    },
+    {
+      "name": "Thời trang",
+      "slug": "thoi-trang",
+      "primary": 4
+    },
+    {
+      "name": "Phụ kiện",
+      "slug": "phu-kien",
+      "primary": 5
+    },
+    {
+      "name": "Thể thao",
+      "slug": "the-thao",
+      "primary": 0
+    },
+    {
+      "name": "Thú cưng",
+      "slug": "thu-cung",
+      "primary": 0
+    },
+    {
+      "name": "Thực phẩm & đồ uống",
+      "slug": "thuc-pham",
+      "primary": 0
+    },
+    {
+      "name": "Mascara",
+      "slug": "mascara",
+      "primary": 19
+    },
+    {
+      "name": "Phấn mắt",
+      "slug": "phan-mat",
+      "primary": 20
+    },
+    {
+      "name": "Phấn phủ",
+      "slug": "phan-phu",
+      "primary": 15
+    },
+    {
+      "name": "Son môi",
+      "slug": "son-moi",
+      "primary": 24
+    },
+    {
+      "name": "Chăm sóc móng",
+      "slug": "cham-soc-mong",
+      "primary": 22
+    },
+    {
+      "name": "Nước hoa unisex",
+      "slug": "nuoc-hoa-unisex",
+      "primary": 17
+    },
+    {
+      "name": "Nước hoa nữ",
+      "slug": "nuoc-hoa-nu",
+      "primary": 17
+    },
+    {
+      "name": "Giường ngủ",
+      "slug": "giuong-ngu",
+      "primary": 18
+    },
+    {
+      "name": "Sofa",
+      "slug": "sofa",
+      "primary": 18
+    },
+    {
+      "name": "Bàn đầu giường",
+      "slug": "ban-dau-giuong",
+      "primary": 15
+    },
+    {
+      "name": "Ghế văn phòng",
+      "slug": "ghe-van-phong",
+      "primary": 19
+    },
+    {
+      "name": "Tủ phòng tắm",
+      "slug": "tu-phong-tam",
+      "primary": 23
+    },
+    {
+      "name": "Khung ảnh",
+      "slug": "khung-anh",
+      "primary": 14
+    },
+    {
+      "name": "Cây & chậu trang trí",
+      "slug": "cay-chau-trang-tri",
+      "primary": 16
+    },
+    {
+      "name": "Đèn bàn",
+      "slug": "den-ban",
+      "primary": 16
+    },
+    {
+      "name": "Đồ trang trí",
+      "slug": "do-trang-tri",
+      "primary": 23
+    },
+    {
+      "name": "Nồi & chảo",
+      "slug": "noi-chao",
+      "primary": 15
+    },
+    {
+      "name": "Dụng cụ nấu ăn",
+      "slug": "dung-cu-nau-an",
+      "primary": 19
+    },
+    {
+      "name": "Ly & cốc",
+      "slug": "ly-coc",
+      "primary": 19
+    },
+    {
+      "name": "Đĩa & khay",
+      "slug": "dia-khay",
+      "primary": 22
+    },
+    {
+      "name": "Hộp & kệ bếp",
+      "slug": "hop-ke-bep",
+      "primary": 18
+    },
+    {
+      "name": "Điện gia dụng",
+      "slug": "dien-gia-dung",
+      "primary": 22
+    },
+    {
+      "name": "Laptop",
+      "slug": "laptop",
+      "primary": 22
+    },
+    {
+      "name": "Áo nam",
+      "slug": "ao-nam",
+      "primary": 23
+    },
+    {
+      "name": "Giày thể thao nam",
+      "slug": "giay-the-thao-nam",
+      "primary": 20
+    },
+    {
+      "name": "Đồng hồ nam",
+      "slug": "dong-ho-nam",
+      "primary": 22
+    },
+    {
+      "name": "Tai nghe",
+      "slug": "tai-nghe",
+      "primary": 18
+    },
+    {
+      "name": "Loa thông minh",
+      "slug": "loa-thong-minh",
+      "primary": 19
+    },
+    {
+      "name": "Sạc & pin dự phòng",
+      "slug": "sac-pin",
+      "primary": 18
+    },
+    {
+      "name": "Ốp điện thoại",
+      "slug": "op-dien-thoai",
+      "primary": 20
+    },
+    {
+      "name": "Phụ kiện quay chụp",
+      "slug": "phu-kien-quay-chup",
+      "primary": 21
+    },
+    {
+      "name": "Đồng hồ thông minh",
+      "slug": "dong-ho-thong-minh",
+      "primary": 21
+    },
+    {
+      "name": "Chăm sóc cơ thể",
+      "slug": "cham-soc-co-the",
+      "primary": 22
+    },
+    {
+      "name": "Điện thoại iPhone",
+      "slug": "iphone",
+      "primary": 22
+    },
+    {
+      "name": "Điện thoại Android",
+      "slug": "dien-thoai-android",
+      "primary": 19
+    },
+    {
+      "name": "Bóng thể thao",
+      "slug": "bong-the-thao",
+      "primary": 24
+    },
+    {
+      "name": "Dụng cụ thể thao",
+      "slug": "dung-cu-the-thao",
+      "primary": 26
+    },
+    {
+      "name": "Kính mát",
+      "slug": "kinh-mat",
+      "primary": 18
+    },
+    {
+      "name": "Máy tính bảng",
+      "slug": "may-tinh-bang",
+      "primary": 18
+    },
+    {
+      "name": "Váy & đầm",
+      "slug": "vay-dam",
+      "primary": 17
+    },
+    {
+      "name": "Bộ đồ nữ",
+      "slug": "bo-do-nu",
+      "primary": 21
+    },
+    {
+      "name": "Túi xách nữ",
+      "slug": "tui-xach-nu",
+      "primary": 19
+    },
+    {
+      "name": "Ba lô",
+      "slug": "balo",
+      "primary": 19
+    },
+    {
+      "name": "Bông tai",
+      "slug": "bong-tai",
+      "primary": 26
+    },
+    {
+      "name": "Giày cao gót",
+      "slug": "giay-cao-got",
+      "primary": 20
+    },
+    {
+      "name": "Dép nữ",
+      "slug": "dep-nu",
+      "primary": 24
+    },
+    {
+      "name": "Đồng hồ nữ",
+      "slug": "dong-ho-nu",
+      "primary": 20
+    },
+    {
+      "name": "Thức ăn thú cưng",
+      "slug": "thuc-an-thu-cung",
+      "primary": 21
+    },
+    {
+      "name": "Giấy & vệ sinh nhà cửa",
+      "slug": "giay-ve-sinh",
+      "primary": 24
+    },
+    {
+      "name": "Cà phê",
+      "slug": "ca-phe",
+      "primary": 25
+    },
+    {
+      "name": "Văn phòng phẩm",
+      "slug": "legacy-041ed9be3864",
+      "primary": 3
+    }
+  ],
+  "afterCounts": [
+    {
+      "name": "Công nghệ",
+      "slug": "cong-nghe",
+      "parentSlug": null,
+      "primary": 3,
+      "total": 201
+    },
+    {
+      "name": "Điện thoại",
+      "slug": "dien-thoai",
+      "parentSlug": "cong-nghe",
+      "primary": 41,
+      "total": 41
+    },
+    {
+      "name": "Máy tính bảng",
+      "slug": "may-tinh-bang",
+      "parentSlug": "cong-nghe",
+      "primary": 18,
+      "total": 18
+    },
+    {
+      "name": "Laptop",
+      "slug": "laptop",
+      "parentSlug": "cong-nghe",
+      "primary": 22,
+      "total": 22
+    },
+    {
+      "name": "Tai nghe & loa",
+      "slug": "tai-nghe-loa",
+      "parentSlug": "cong-nghe",
+      "primary": 37,
+      "total": 37
+    },
+    {
+      "name": "Đồng hồ thông minh",
+      "slug": "dong-ho-thong-minh",
+      "parentSlug": "cong-nghe",
+      "primary": 21,
+      "total": 21
+    },
+    {
+      "name": "Sạc & pin dự phòng",
+      "slug": "sac-pin-du-phong",
+      "parentSlug": "cong-nghe",
+      "primary": 18,
+      "total": 18
+    },
+    {
+      "name": "Ốp & phụ kiện điện thoại",
+      "slug": "op-phu-kien-dien-thoai",
+      "parentSlug": "cong-nghe",
+      "primary": 20,
+      "total": 20
+    },
+    {
+      "name": "Phụ kiện quay chụp",
+      "slug": "phu-kien-quay-chup",
+      "parentSlug": "cong-nghe",
+      "primary": 21,
+      "total": 21
+    },
+    {
+      "name": "Thời trang",
+      "slug": "thoi-trang",
+      "parentSlug": null,
+      "primary": 4,
+      "total": 129
+    },
+    {
+      "name": "Áo nam",
+      "slug": "ao-nam",
+      "parentSlug": "thoi-trang",
+      "primary": 23,
+      "total": 23
+    },
+    {
+      "name": "Giày thể thao nam",
+      "slug": "giay-the-thao-nam",
+      "parentSlug": "thoi-trang",
+      "primary": 20,
+      "total": 20
+    },
+    {
+      "name": "Váy & đầm",
+      "slug": "vay-dam",
+      "parentSlug": "thoi-trang",
+      "primary": 17,
+      "total": 17
+    },
+    {
+      "name": "Bộ đồ nữ",
+      "slug": "bo-do-nu",
+      "parentSlug": "thoi-trang",
+      "primary": 21,
+      "total": 21
+    },
+    {
+      "name": "Giày cao gót",
+      "slug": "giay-cao-got",
+      "parentSlug": "thoi-trang",
+      "primary": 20,
+      "total": 20
+    },
+    {
+      "name": "Dép nữ",
+      "slug": "dep-nu",
+      "parentSlug": "thoi-trang",
+      "primary": 24,
+      "total": 24
+    },
+    {
+      "name": "Phụ kiện",
+      "slug": "phu-kien",
+      "parentSlug": null,
+      "primary": 5,
+      "total": 129
+    },
+    {
+      "name": "Đồng hồ",
+      "slug": "dong-ho",
+      "parentSlug": "phu-kien",
+      "primary": 42,
+      "total": 42
+    },
+    {
+      "name": "Kính mát",
+      "slug": "kinh-mat",
+      "parentSlug": "phu-kien",
+      "primary": 18,
+      "total": 18
+    },
+    {
+      "name": "Túi xách & ba lô",
+      "slug": "tui-xach-ba-lo",
+      "parentSlug": "phu-kien",
+      "primary": 38,
+      "total": 38
+    },
+    {
+      "name": "Trang sức",
+      "slug": "trang-suc",
+      "parentSlug": "phu-kien",
+      "primary": 26,
+      "total": 26
+    },
+    {
+      "name": "Làm đẹp",
+      "slug": "lam-dep",
+      "parentSlug": null,
+      "primary": 3,
+      "total": 159
+    },
+    {
+      "name": "Trang điểm mắt",
+      "slug": "trang-diem-mat",
+      "parentSlug": "lam-dep",
+      "primary": 39,
+      "total": 39
+    },
+    {
+      "name": "Trang điểm mặt",
+      "slug": "trang-diem-khuon-mat",
+      "parentSlug": "lam-dep",
+      "primary": 15,
+      "total": 15
+    },
+    {
+      "name": "Son môi",
+      "slug": "son-moi",
+      "parentSlug": "lam-dep",
+      "primary": 24,
+      "total": 24
+    },
+    {
+      "name": "Chăm sóc móng",
+      "slug": "cham-soc-mong",
+      "parentSlug": "lam-dep",
+      "primary": 22,
+      "total": 22
+    },
+    {
+      "name": "Nước hoa",
+      "slug": "nuoc-hoa",
+      "parentSlug": "lam-dep",
+      "primary": 34,
+      "total": 34
+    },
+    {
+      "name": "Chăm sóc cơ thể",
+      "slug": "cham-soc-co-the",
+      "parentSlug": "lam-dep",
+      "primary": 22,
+      "total": 22
+    },
+    {
+      "name": "Nhà cửa & Nội thất",
+      "slug": "nha-cua-noi-that",
+      "parentSlug": null,
+      "primary": 5,
+      "total": 191
+    },
+    {
+      "name": "Giường & bàn đầu giường",
+      "slug": "giuong-ban-dau-giuong",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 33,
+      "total": 33
+    },
+    {
+      "name": "Sofa",
+      "slug": "sofa",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 18,
+      "total": 18
+    },
+    {
+      "name": "Ghế văn phòng",
+      "slug": "ghe-van-phong",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 19,
+      "total": 19
+    },
+    {
+      "name": "Tủ phòng tắm",
+      "slug": "tu-phong-tam",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 23,
+      "total": 23
+    },
+    {
+      "name": "Đèn bàn",
+      "slug": "den-ban",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 16,
+      "total": 16
+    },
+    {
+      "name": "Cây & chậu",
+      "slug": "cay-chau",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 16,
+      "total": 16
+    },
+    {
+      "name": "Khung ảnh & đồ trang trí",
+      "slug": "khung-anh-do-trang-tri",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 37,
+      "total": 37
+    },
+    {
+      "name": "Giấy & vệ sinh nhà cửa",
+      "slug": "giay-ve-sinh-nha-cua",
+      "parentSlug": "nha-cua-noi-that",
+      "primary": 24,
+      "total": 24
+    },
+    {
+      "name": "Nhà bếp",
+      "slug": "nha-bep",
+      "parentSlug": null,
+      "primary": 0,
+      "total": 115
+    },
+    {
+      "name": "Nồi & chảo",
+      "slug": "noi-chao",
+      "parentSlug": "nha-bep",
+      "primary": 15,
+      "total": 15
+    },
+    {
+      "name": "Dụng cụ nấu ăn",
+      "slug": "dung-cu-nau-an",
+      "parentSlug": "nha-bep",
+      "primary": 19,
+      "total": 19
+    },
+    {
+      "name": "Ly & cốc",
+      "slug": "ly-coc",
+      "parentSlug": "nha-bep",
+      "primary": 19,
+      "total": 19
+    },
+    {
+      "name": "Đĩa & khay",
+      "slug": "dia-khay",
+      "parentSlug": "nha-bep",
+      "primary": 22,
+      "total": 22
+    },
+    {
+      "name": "Hộp & kệ bếp",
+      "slug": "hop-ke-bep",
+      "parentSlug": "nha-bep",
+      "primary": 18,
+      "total": 18
+    },
+    {
+      "name": "Đồ điện nhà bếp",
+      "slug": "do-dien-nha-bep",
+      "parentSlug": "nha-bep",
+      "primary": 22,
+      "total": 22
+    },
+    {
+      "name": "Thể thao",
+      "slug": "the-thao",
+      "parentSlug": null,
+      "primary": 0,
+      "total": 50
+    },
+    {
+      "name": "Bóng thể thao",
+      "slug": "bong-the-thao",
+      "parentSlug": "the-thao",
+      "primary": 24,
+      "total": 24
+    },
+    {
+      "name": "Dụng cụ thể thao",
+      "slug": "dung-cu-the-thao",
+      "parentSlug": "the-thao",
+      "primary": 26,
+      "total": 26
+    },
+    {
+      "name": "Thú cưng",
+      "slug": "thu-cung",
+      "parentSlug": null,
+      "primary": 21,
+      "total": 21
+    },
+    {
+      "name": "Thực phẩm & đồ uống",
+      "slug": "thuc-pham-do-uong",
+      "parentSlug": null,
+      "primary": 25,
+      "total": 25
+    },
+    {
+      "name": "Văn phòng phẩm",
+      "slug": "van-phong-pham",
+      "parentSlug": null,
+      "primary": 3,
+      "total": 3
+    }
+  ],
+  "hiddenCategories": [],
+  "archivedCategories": [
+    "Nội thất",
+    "Nhà cửa",
+    "Mascara",
+    "Phấn mắt",
+    "Phấn phủ",
+    "Nước hoa unisex",
+    "Nước hoa nữ",
+    "Giường ngủ",
+    "Bàn đầu giường",
+    "Khung ảnh",
+    "Cây & chậu trang trí",
+    "Đồ trang trí",
+    "Điện gia dụng",
+    "Đồng hồ nam",
+    "Tai nghe",
+    "Loa thông minh",
+    "Ốp điện thoại",
+    "Điện thoại iPhone",
+    "Điện thoại Android",
+    "Túi xách nữ",
+    "Ba lô",
+    "Bông tai",
+    "Đồng hồ nữ",
+    "Thức ăn thú cưng",
+    "Cà phê"
+  ],
+  "missingAttributes": [
+    {
+      "id": "da495f6bca06e01b462937c2",
+      "name": "White Faux Leather Backpack · Nét Select",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "a23cfde9cd4bc1a5b8154d7e",
+      "name": "White Faux Leather Backpack · Mây Market",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "b0c0a7997b61b3c5d03063b2",
+      "name": "White Faux Leather Backpack · An Nhiên Store",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "cfd87b0e1c96eccfac5b80aa",
+      "name": "White Faux Leather Backpack · Góc Nhà Mình",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "ec17d514d92fd132cf967b3f",
+      "name": "White Faux Leather Backpack · Mộc Shop",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "690cdb74012885d85e253533",
+      "name": "White Faux Leather Backpack · Sao Mai",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "3fb6240418e060ced5469e70",
+      "name": "White Faux Leather Backpack · Urban Choice",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "aa37f7376e92e707484139f5",
+      "name": "White Faux Leather Backpack · Daily Mart",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "0218af5bc43795703e6c14c2",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Nét Select",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "09afa19f368cd3466c316174",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Mây Market",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "93d8fc0cd7f6de891bdc415f",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · An Nhiên Store",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "fbb8f75ba6a8f116a238ad1a",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Góc Nhà Mình",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "4191320b08977774fe77ad96",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Mộc Shop",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "063e5f2833c1934bfc90e8f1",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Sao Mai",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "d675e085a33add9bc45934e3",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Urban Choice",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "964f18182e3e5a55bc1742c7",
+      "name": "White Faux Leather Backpack — bộ 2 sản phẩm · Daily Mart",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "40b431557852f936eddf628d",
+      "name": "White Faux Leather Backpack — bộ 3 sản phẩm · Nét Select",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "0f2ba1842510956566bb48de",
+      "name": "White Faux Leather Backpack — bộ 3 sản phẩm · Mây Market",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "3fd1676d4360b2c850ebcdc8",
+      "name": "White Faux Leather Backpack — bộ 3 sản phẩm · An Nhiên Store",
+      "category": "Túi xách & ba lô",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "b8271f5991efb47bad929724",
+      "name": "Green Crystal Earring · Nét Select",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "db8a7b91c00c816db36c341f",
+      "name": "Green Oval Earring · Nét Select",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "2a221a4a35152f3d7a925d34",
+      "name": "Tropical Earring · Nét Select",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "7f8c34f21049f597d1bf2099",
+      "name": "Green Crystal Earring · Mây Market",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "7a9e02b65917034026f0cdce",
+      "name": "Green Oval Earring · Mây Market",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "7aa6112eeaa38dad80d5fdd8",
+      "name": "Tropical Earring · Mây Market",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "9c7a608eb63e9a086a78db14",
+      "name": "Green Crystal Earring · An Nhiên Store",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "cf56811aae5e333df8a2975b",
+      "name": "Green Oval Earring · An Nhiên Store",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "e7586cf2ed294c97cbf5a03c",
+      "name": "Tropical Earring · An Nhiên Store",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "f2bb9cc0d8346d293bc4b322",
+      "name": "Green Crystal Earring · Góc Nhà Mình",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "03bf9de2fb28c4f1491fcad6",
+      "name": "Green Oval Earring · Góc Nhà Mình",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "4ecf7dd76fdfbef752cd90d9",
+      "name": "Tropical Earring · Góc Nhà Mình",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "76587c2f2f995d2b40c69053",
+      "name": "Green Crystal Earring · Mộc Shop",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "9eb5fca430bdc0b18f017460",
+      "name": "Green Oval Earring · Mộc Shop",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "2f35fa62a2ef8c73371680de",
+      "name": "Tropical Earring · Mộc Shop",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "4d114a6ba66e15e244dc6ee7",
+      "name": "Green Crystal Earring · Sao Mai",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "d881392eb76d43415edaa690",
+      "name": "Green Oval Earring · Sao Mai",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "cbc82d05dd6db36f8a5fb3e3",
+      "name": "Tropical Earring · Sao Mai",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "2d75f2b227b92a905c987ab4",
+      "name": "Green Crystal Earring · Urban Choice",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "b84c3a38c40e2896c904fcb9",
+      "name": "Green Oval Earring · Urban Choice",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "2a6613791ce3c53ba5783467",
+      "name": "Tropical Earring · Urban Choice",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "4bd00bc54369149db521a231",
+      "name": "Green Crystal Earring · Daily Mart",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "ee9fb3af2f2665ce5e8fcd7b",
+      "name": "Green Oval Earring · Daily Mart",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "e11baae36aa62dd98b2cb2b0",
+      "name": "Tropical Earring · Daily Mart",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "0517cf690d74a92cd6d7f23f",
+      "name": "Green Crystal Earring — bộ 2 sản phẩm · Nét Select",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    },
+    {
+      "id": "226c112e0a1233d7b0e375f6",
+      "name": "Green Oval Earring — bộ 2 sản phẩm · Nét Select",
+      "category": "Trang sức",
+      "missing": [
+        "gender"
+      ]
+    }
+  ],
+  "classificationReview": [
+    {
+      "id": "6af3222384ad09fa836f36e9",
+      "name": "Áo sơ mi Linen",
+      "category": "Thời trang"
+    },
+    {
+      "id": "6af3222384ad09fa836f36ea",
+      "name": "Áo thun Cotton Basic",
+      "category": "Thời trang"
+    },
+    {
+      "id": "6af3222384ad09fa836f36eb",
+      "name": "Áo khoác Denim",
+      "category": "Thời trang"
+    },
+    {
+      "id": "6af3222384ad09fa836f36ec",
+      "name": "Túi Canvas Daily",
+      "category": "Phụ kiện"
+    },
+    {
+      "id": "6af3222384ad09fa836f36ed",
+      "name": "Cốc gốm Morning",
+      "category": "Nhà cửa & Nội thất"
+    },
+    {
+      "id": "6af3222384ad09fa836f36ee",
+      "name": "Ví da Compact",
+      "category": "Phụ kiện"
+    },
+    {
+      "id": "6af3222384ad09fa836f36ef",
+      "name": "Kính mát Frame 01",
+      "category": "Phụ kiện"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f0",
+      "name": "Đồng hồ Minimal",
+      "category": "Phụ kiện"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f1",
+      "name": "Giày Cloud Walk",
+      "category": "Thời trang"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f2",
+      "name": "Nến thơm Gỗ tuyết tùng",
+      "category": "Nhà cửa & Nội thất"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f3",
+      "name": "Tai nghe Quiet",
+      "category": "Công nghệ"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f4",
+      "name": "Bàn phím Mechanical",
+      "category": "Công nghệ"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f5",
+      "name": "Loa để bàn Mini",
+      "category": "Công nghệ"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f6",
+      "name": "Đèn bàn Halo",
+      "category": "Nhà cửa & Nội thất"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f7",
+      "name": "Gối tựa Soft Cloud",
+      "category": "Nhà cửa & Nội thất"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f8",
+      "name": "Khay gỗ Oak",
+      "category": "Nhà cửa & Nội thất"
+    },
+    {
+      "id": "6af3222384ad09fa836f36f9",
+      "name": "Bộ chăm sóc da Daily",
+      "category": "Làm đẹp"
+    },
+    {
+      "id": "6af3222384ad09fa836f36fa",
+      "name": "Bộ chăm sóc tóc Silk",
+      "category": "Làm đẹp"
+    },
+    {
+      "id": "6af3222384ad09fa836f36fb",
+      "name": "Túi mỹ phẩm Travel",
+      "category": "Làm đẹp"
+    },
+    {
+      "id": "6af3222384ad09fa836f36fc",
+      "name": "Ba lô Travel 20L",
+      "category": "Phụ kiện"
+    }
+  ],
+  "applied": true,
+  "verifiedAt": "2026-11-25T08:44:47.745Z",
+  "checks": {
+    "productCountPreserved": true,
+    "businessFieldsPreserved": true,
+    "exactlyOnePrimary": true,
+    "noOrphans": true,
+    "correctParents": true,
+    "noSingleChildParents": true,
+    "idempotent": true,
+    "everyOldSlugResolves": true
+  },
+  "rootComparison": [
+    {
+      "name": "Công nghệ",
+      "beforeMemberships": 201,
+      "afterProducts": 201
+    },
+    {
+      "name": "Thời trang",
+      "beforeMemberships": 253,
+      "afterProducts": 129
+    },
+    {
+      "name": "Phụ kiện",
+      "beforeMemberships": 227,
+      "afterProducts": 129
+    },
+    {
+      "name": "Làm đẹp",
+      "beforeMemberships": 159,
+      "afterProducts": 159
+    },
+    {
+      "name": "Nhà cửa & Nội thất",
+      "beforeMemberships": 191,
+      "afterProducts": 191
+    },
+    {
+      "name": "Nhà bếp",
+      "beforeMemberships": 115,
+      "afterProducts": 115
+    },
+    {
+      "name": "Thể thao",
+      "beforeMemberships": 91,
+      "afterProducts": 50
+    },
+    {
+      "name": "Thú cưng",
+      "beforeMemberships": 21,
+      "afterProducts": 21
+    },
+    {
+      "name": "Thực phẩm & đồ uống",
+      "beforeMemberships": 25,
+      "afterProducts": 25
+    },
+    {
+      "name": "Văn phòng phẩm",
+      "beforeMemberships": 3,
+      "afterProducts": 3
+    }
+  ],
+  "databaseCategoryRecords": 75,
+  "backupFile": "catalog-v2-2026-11-25T08-39-47-065Z.ejson"
+}

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { openPayment, paymentLabels, canRetry } from "./lib/payment";
 import { ClipboardList, Search, Star } from "lucide-react";
 
 const tabs = [
   ["all", "Tất cả"],
   ["pending", "Chờ thanh toán"],
+  ["confirmed", "Đã xác nhận"],
   ["shipping", "Vận chuyển"],
   ["delivering", "Chờ giao hàng"],
   ["completed", "Hoàn thành"],
@@ -13,6 +15,7 @@ const tabs = [
 
 const statusText = {
   pending: "Chờ thanh toán",
+  confirmed: "Đã xác nhận",
   shipped: "Đang vận chuyển",
   shipping: "Đang vận chuyển",
   delivering: "Chờ giao hàng",
@@ -50,7 +53,11 @@ function toDisplayOrder(order) {
   return {
     id: orderId,
     databaseId: order._id,
-    status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    orderStatus: order.orderStatus,
+    expiresAt: order.expiresAt,
+    status: ["returning", "delivering"].includes(status) ? status : order.orderStatus === "delivered" ? "completed" : order.orderStatus || status,
     createdAt: order.createdAt,
     total: order.totalPrice,
     reviewedProductIds: order.reviewedProductIds || [],
@@ -251,7 +258,7 @@ function OrdersPanel({ email, authToken }) {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Bạn có thể tìm kiếm theo mã đơn hoặc tên sản phẩm"
-        />
+       />
       </label>
       {syncMessage && (
         <p className="coupon-error" role="alert">
@@ -270,7 +277,7 @@ function OrdersPanel({ email, authToken }) {
             <article className="order-card" key={order.id}>
               <header>
                 <span>#{order.id.slice(-8).toUpperCase()}</span>
-                <b>{statusText[order.status] || order.status}</b>
+                <b>{order.status === "pending" && order.paymentStatus === "paid" ? "Chờ xử lý" : statusText[order.status] || order.status}</b>
               </header>
               <div className="order-items">
                 {order.items.map((item) => (
@@ -278,7 +285,7 @@ function OrdersPanel({ email, authToken }) {
                     className="order-item"
                     key={`${order.id}-${item._id}`}
                   >
-                    <img src={item.images?.[0]} alt="" />
+                    <img width="80" height="80" loading="lazy" decoding="async" src={item.images?.[0]} alt="" />
                     <div>
                       <strong>{item.name}</strong>
                       <small>x{item.quantity}</small>
@@ -327,7 +334,7 @@ function OrdersPanel({ email, authToken }) {
                       placeholder="Chia sẻ cảm nhận của bạn về sản phẩm"
                       rows={3}
                       required
-                    />
+                   />
                     {reviewMessage && (
                       <p className="review-message" role="alert">{reviewMessage}</p>
                     )}
@@ -350,6 +357,8 @@ function OrdersPanel({ email, authToken }) {
               </div>
               <footer>
                 <small>{new Date(order.createdAt).toLocaleDateString("vi-VN")}</small>
+                {order.paymentStatus && <span>{order.paymentMethod.toUpperCase()} · {paymentLabels[order.paymentStatus]}</span>}
+                {canRetry(order) && <button onClick={() => openPayment(order.databaseId, authToken).catch(error => setSyncMessage(error.message))}>Thanh toán lại</button>}
                 <strong>Tổng tiền: {formatPrice(order.total)}</strong>
                 <button className="order-detail-button">Xem chi tiết</button>
               </footer>

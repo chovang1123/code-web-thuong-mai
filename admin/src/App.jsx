@@ -2,14 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
-  CircleHelp,
   LogIn,
-  LogOut,
   MessageCircle,
-  Minus,
-  Plus,
-  Search,
-  ShoppingBag,
   Star,
   Store,
   UserPlus,
@@ -22,270 +16,24 @@ import BankPanel from "./BankPanel";
 import AddressPanel from "./AddressPanel";
 import OrdersPanel from "./OrdersPanel";
 import VoucherPanel from "./VoucherPanel";
-import AdvertisingSection from "./AdvertisingSection";
+import { openPayment } from "./lib/payment";
 import CheckoutPanel from "./CheckoutPanel";
-import { withSellerDetails } from "./lib/marketplace";
+import { decorateProduct, formatPrice, productRating, productSold } from "./lib/products";
 import SellerDashboard from "./pages/SellerDashboard";
+import ProductImage from "./components/ProductImage";
+import StoreHeader from "./components/StoreHeader";
+import StoreFooter from "./components/StoreFooter";
+import HomePage from "./components/HomePage";
+import { historyKey, readViewHistory, recordProductView } from "./lib/recommendations";
+import CartDrawer, { CartPage } from "./components/CartDrawer";
+import Dialog from "./components/Dialog";
+import { coupons } from "./lib/storeConfig";
+import { checkoutTotals } from "./lib/cartPricing";
+import useCategoryLocation from "./lib/useCategoryLocation";
+import CategoryBreadcrumb from "./components/CategoryBreadcrumb";
 
-const fallbackProducts = [
-  {
-    _id: "linen-shirt",
-    name: "Áo sơ mi Linen",
-    description:
-      "Phom relaxed, chất linen thoáng nhẹ cho những ngày năng động.",
-    price: 420000,
-    category: "Thời trang",
-    images: [
-      "https://images.unsplash.com/photo-1603252110481-7ba873bf42ab?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "cotton-tee",
-    name: "Áo thun Cotton Basic",
-    description: "Cotton mềm thoáng, phom cơ bản dễ phối mỗi ngày.",
-    price: 195000,
-    category: "Thời trang",
-    images: [
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "denim-jacket",
-    name: "Áo khoác Denim",
-    description: "Lớp khoác denim đứng dáng cho những ngày se lạnh.",
-    price: 690000,
-    category: "Thời trang",
-    images: [
-      "https://images.unsplash.com/photo-1551028719-00167b16eac5?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "canvas-tote",
-    name: "Túi Canvas Daily",
-    description: "Túi canvas bền chắc, đủ rộng cho một ngày làm việc.",
-    price: 285000,
-    category: "Phụ kiện",
-    images: [
-      "https://images.unsplash.com/photo-1594223274512-ad4803739b7c?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "ceramic-cup",
-    name: "Cốc gốm Morning",
-    description: "Một chiếc cốc thủ công cho nghi thức buổi sáng chậm rãi.",
-    price: 190000,
-    category: "Nhà cửa",
-    images: [
-      "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "leather-wallet",
-    name: "Ví da Compact",
-    description: "Thiết kế tối giản, gọn gàng, dùng lâu càng đẹp.",
-    price: 560000,
-    category: "Phụ kiện",
-    images: [
-      "https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "sunglasses-frame",
-    name: "Kính mát Frame 01",
-    description: "Gọng kính nhẹ, tròng chống UV cho ngày nắng.",
-    price: 325000,
-    category: "Phụ kiện",
-    images: [
-      "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "minimal-watch",
-    name: "Đồng hồ Minimal",
-    description: "Mặt số thanh lịch, dây da mềm và dễ phối đồ.",
-    price: 780000,
-    category: "Phụ kiện",
-    images: [
-      "https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "sneakers-cloud",
-    name: "Giày Cloud Walk",
-    description: "Đế êm nhẹ, phối đồ linh hoạt cho cả ngày dài.",
-    price: 890000,
-    category: "Thời trang",
-    images: [
-      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "scented-candle",
-    name: "Nến thơm Gỗ tuyết tùng",
-    description: "Hương gỗ ấm, tạo một góc nhà thật thư thái.",
-    price: 245000,
-    category: "Nhà cửa",
-    images: [
-      "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "wireless-headphones",
-    name: "Tai nghe Quiet",
-    description: "Âm thanh rõ, thiết kế gọn cho những chuyến đi xa.",
-    price: 1250000,
-    category: "Công nghệ",
-    images: [
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "mechanical-keyboard",
-    name: "Bàn phím Mechanical",
-    description: "Layout gọn, gõ êm và phù hợp góc máy tối giản.",
-    price: 980000,
-    category: "Công nghệ",
-    images: [
-      "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "desk-speaker",
-    name: "Loa để bàn Mini",
-    description: "Âm thanh cân bằng cho bàn làm việc và phòng nhỏ.",
-    price: 540000,
-    category: "Công nghệ",
-    images: [
-      "https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "desk-lamp",
-    name: "Đèn bàn Halo",
-    description: "Ánh sáng dịu cho góc học tập và làm việc.",
-    price: 635000,
-    category: "Nhà cửa",
-    images: [
-      "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "soft-pillow",
-    name: "Gối tựa Soft Cloud",
-    description: "Gối tựa êm với màu trung tính cho sofa và phòng ngủ.",
-    price: 210000,
-    category: "Nhà cửa",
-    images: [
-      "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "wooden-tray",
-    name: "Khay gỗ Oak",
-    description: "Khay gỗ vân tự nhiên, đẹp cho bàn trà và bàn làm việc.",
-    price: 295000,
-    category: "Nhà cửa",
-    images: [
-      "https://images.unsplash.com/photo-1603199506016-b9a594b593c0?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "skincare-set",
-    name: "Bộ chăm sóc da Daily",
-    description: "Bộ ba bước tối giản cho làn da sạch và đủ ẩm.",
-    price: 480000,
-    category: "Làm đẹp",
-    images: [
-      "https://images.unsplash.com/photo-1556228578-8c89e6adf883?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "hair-care",
-    name: "Bộ chăm sóc tóc Silk",
-    description: "Dưỡng tóc nhẹ nhàng cho mái tóc mềm và sáng khỏe.",
-    price: 365000,
-    category: "Làm đẹp",
-    images: [
-      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "makeup-bag",
-    name: "Túi mỹ phẩm Travel",
-    description: "Nhiều ngăn nhỏ gọn, tiện mang theo trong mỗi chuyến đi.",
-    price: 230000,
-    category: "Làm đẹp",
-    images: [
-      "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "travel-backpack",
-    name: "Ba lô Travel 20L",
-    description: "Nhiều ngăn tiện dụng, sẵn sàng cho công việc và du lịch.",
-    price: 745000,
-    category: "Phụ kiện",
-    images: [
-      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "notebook-set",
-    name: "Sổ giấy tái chế",
-    description: "Bộ sổ ba cuốn cho ý tưởng, kế hoạch và những ghi chú nhỏ.",
-    price: 120000,
-    category: "Văn phòng phẩm",
-    images: [
-      "https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "desk-organizer",
-    name: "Khay đựng bút Desk",
-    description: "Giữ góc học tập gọn gàng với khay đựng đa năng.",
-    price: 145000,
-    category: "Văn phòng phẩm",
-    images: [
-      "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-  {
-    _id: "planner-2026",
-    name: "Sổ kế hoạch 2026",
-    description: "Lịch tuần, mục tiêu và ghi chú trong một cuốn sổ tiện dụng.",
-    price: 175000,
-    category: "Văn phòng phẩm",
-    images: [
-      "https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=900&q=80",
-    ],
-  },
-];
 
-const coupons = {
-  NET10: { type: "percent", value: 10, label: "Giảm 10%" },
-  WELCOME50: { type: "fixed", value: 50000, label: "Giảm 50.000đ" },
-  FREESHIP: { type: "fixed", value: 30000, label: "Giảm 30.000đ" },
-};
-const discountRates = [10, 15, 20, 12, 25, 18, 30, 10, 16, 22, 14];
-const decorateProduct = (product, index) => ({
-  ...withSellerDetails(product, index),
-  originalPrice:
-    product.originalPrice ||
-    Math.round(
-      product.price / (1 - discountRates[index % discountRates.length] / 100),
-    ),
-  discountPercent:
-    product.discountPercent || discountRates[index % discountRates.length],
-  sold: product.sold || (index + 2) * 137,
-});
-const demoFallbackProducts = fallbackProducts.map(decorateProduct);
 
-const formatPrice = (price) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(price);
 const cartStorageKey = (email) =>
   `net_store_cart_${email?.trim().toLowerCase() || "guest"}`;
 const loadSavedCart = (email) => {
@@ -328,24 +76,29 @@ function App() {
     shopLocation: "",
   });
   const [authError, setAuthError] = useState("");
-  const [products, setProducts] = useState(
-    fallbackProducts.map(decorateProduct),
-  );
-  const [category, setCategory] = useState("Tất cả");
+  const [products, setProducts] = useState([]);
+  const [productLoading, setProductLoading] = useState(true);
+  const [productError, setProductError] = useState("");
+  const [productReload, setProductReload] = useState(0);
+  const [category, setCategory] = useCategoryLocation();
+  const [catalog, setCatalog] = useState([]);
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [cart, setCart] = useState(() => loadSavedCart(authEmail));
   const [cartReady, setCartReady] = useState(false);
   const [cartSyncMessage, setCartSyncMessage] = useState("");
-  const [orderError, setOrderError] = useState("");
   const cartSaveQueue = useRef(Promise.resolve());
   const [cartOpen, setCartOpen] = useState(false);
+  const [cartPageOpen, setCartPageOpen] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [viewHistory, setViewHistory] = useState(() => { try { return readViewHistory(localStorage); } catch { return []; } });
+  useEffect(() => { try { localStorage.setItem(historyKey, JSON.stringify(viewHistory)); } catch { /* Browsing works when storage is disabled. */ } }, [viewHistory]);
+  const viewProduct = product => { setViewHistory(history => recordProductView(history, product)); setSelectedProduct(product); };
   const [sellerShop, setSellerShop] = useState(null);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [accountTab, setAccountTab] = useState("profile");
+  const [profileOpen, setProfileOpen] = useState(() => location.pathname === "/orders" && Boolean(authToken));
+  const [accountTab, setAccountTab] = useState(location.pathname === "/orders" ? "orders" : "profile");
   const [profileForm, setProfileForm] = useState({
     name: authUser || "",
     email: authEmail,
@@ -481,52 +234,37 @@ function App() {
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+    const controller = new AbortController();
     let isMounted = true;
-
+    let running = false;
+    fetch(`${apiUrl}/categories`, { signal: controller.signal }).then(response => response.ok ? response.json() : []).then(data => { if (isMounted && Array.isArray(data)) setCatalog(data); }).catch(() => {});
     const loadProducts = async () => {
+      if (running) return;
+      running = true;
       try {
-        const response = await fetch(`${apiUrl}/products`);
-        if (!response.ok) {
-          throw new Error(`Product request failed with status ${response.status}`);
-        }
-
+        const response = await fetch(`${apiUrl}/products`, { signal: controller.signal });
+        if (!response.ok) throw new Error("Không thể tải sản phẩm. Vui lòng thử lại.");
         const data = await response.json();
-        if (!isMounted || !Array.isArray(data)) return;
-        const householdProducts = data.filter(
-          (product) =>
-            !["Ăn uống", "Đồ ăn", "Food", "Beverage"].includes(
-              product.category,
-            ),
-        );
-        const latestProducts = householdProducts.map(decorateProduct);
+        if (!Array.isArray(data)) throw new Error("Dữ liệu sản phẩm chưa hợp lệ. Vui lòng thử lại.");
+        if (!isMounted) return;
+        const latestProducts = data.map(decorateProduct);
         setProducts(latestProducts);
-        setSelectedProduct((current) =>
-          current
-            ? latestProducts.find((product) => product._id === current._id) ||
-              null
-            : current,
-        );
-      } catch (error) {
-        if (isMounted) console.error("Unable to refresh storefront products:", error);
+        setProductError("");
+        setSelectedProduct(current => current ? latestProducts.find(product => product._id === current._id) || null : current);
+      } catch {
+        if (isMounted && !controller.signal.aborted) { setProducts([]); setProductError("Không thể tải sản phẩm. Vui lòng thử lại."); }
+      } finally {
+        running = false;
+        if (isMounted) setProductLoading(false);
       }
     };
-
-    const refreshWhenVisible = () => {
-      if (document.visibilityState === "visible") loadProducts();
-    };
-
+    const refreshWhenVisible = () => { if (document.visibilityState === "visible") loadProducts(); };
     loadProducts();
     window.addEventListener("focus", refreshWhenVisible);
     document.addEventListener("visibilitychange", refreshWhenVisible);
-    const refreshInterval = window.setInterval(refreshWhenVisible, 30000);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener("focus", refreshWhenVisible);
-      document.removeEventListener("visibilitychange", refreshWhenVisible);
-      window.clearInterval(refreshInterval);
-    };
-  }, []);
+    const timer = window.setInterval(refreshWhenVisible, 30000);
+    return () => { isMounted = false; controller.abort(); window.removeEventListener("focus", refreshWhenVisible); document.removeEventListener("visibilitychange", refreshWhenVisible); window.clearInterval(timer); };
+  }, [productReload]);
 
   useEffect(() => {
     if (!selectedProduct?._id || selectedProduct._id.length !== 24) return;
@@ -539,24 +277,6 @@ function App() {
       .catch(() => {});
   }, [selectedProduct]);
 
-  const categories = [
-    "Tất cả",
-    ...new Set(products.map((product) => product.category)),
-  ];
-  const visibleProducts = useMemo(
-    () =>
-      products.filter((product) => {
-        const query = normalizeSearch(search.trim());
-        const searchableText = normalizeSearch(
-          `${product.name} ${product.description || ""} ${product.category}`,
-        );
-        return (
-          (category === "Tất cả" || product.category === category) &&
-          searchableText.includes(query)
-        );
-      }),
-    [category, products, search],
-  );
   const suggestions = useMemo(() => {
     const query = normalizeSearch(search.trim());
     if (!query) return [];
@@ -569,20 +289,15 @@ function App() {
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-  const discount = appliedCoupon
-    ? appliedCoupon.type === "percent"
-      ? Math.round((cartTotal * appliedCoupon.value) / 100)
-      : Math.min(appliedCoupon.value, cartTotal)
-    : 0;
-  const finalTotal = Math.max(0, cartTotal - discount);
 
-  const applyCoupon = () => {
-    const code = couponInput.trim().toUpperCase();
+  const applyCoupon = (input = couponInput) => {
+    const code = input.trim().toUpperCase();
     if (!coupons[code]) {
       setAppliedCoupon(null);
       setCouponMessage("Mã không hợp lệ. Thử NET10, WELCOME50 hoặc FREESHIP.");
       return;
     }
+    setCouponInput(code);
     setAppliedCoupon(coupons[code]);
     setCouponMessage(`${coupons[code].label} đã được áp dụng.`);
   };
@@ -653,7 +368,7 @@ function App() {
         .filter((item) => item.quantity > 0),
     );
 
-  const submitWebOrder = async (shippingAddress) => {
+  const submitWebOrder = async (shippingAddress, paymentMethod = "cod", checkoutReference, bankCode) => {
     if (!authToken) {
       throw new Error("Phiên đăng nhập hết hạn. Vui lòng đăng xuất rồi đăng nhập lại.");
     }
@@ -663,33 +378,38 @@ function App() {
       Authorization: `Bearer ${authToken}`,
       "Content-Type": "application/json",
     };
-    const cartResponse = await fetch(`${apiUrl}/cart/web`, {
-      method: "PUT",
-      headers,
-      body: JSON.stringify({
-        items: cart.map((item) => ({
-          productId: item._id,
-          quantity: item.quantity,
-        })),
-      }),
-    });
-    const cartData = await cartResponse.json();
-    if (!cartResponse.ok) {
-      throw new Error(
-        cartData.message || "Không thể đồng bộ giỏ hàng trước khi đặt.",
-      );
+    if (paymentMethod === "cod") {
+      const cartResponse = await fetch(`${apiUrl}/cart/web`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            productId: item._id,
+            quantity: item.quantity,
+          })),
+        }),
+      });
+      const cartData = await cartResponse.json();
+      if (!cartResponse.ok) {
+        throw new Error(
+          cartData.message || "Không thể đồng bộ giỏ hàng trước khi đặt.",
+        );
+      }
     }
 
     const response = await fetch(`${apiUrl}/orders/web`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ shippingAddress }),
+      body: JSON.stringify({ shippingAddress, paymentMethod, checkoutReference, bankCode, expectedTotal: checkoutTotals(cartTotal, appliedCoupon).total,
+        expectedItems: cart.map(item => ({ product: item._id, quantity: item.quantity })),
+        couponCode: Object.keys(coupons).find(code => coupons[code] === appliedCoupon) }),
     });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.message || "Không thể tạo đơn hàng.");
     }
     setCart([]);
+    if (paymentMethod !== "cod") await openPayment(data.order._id, authToken, bankCode);
     return data.order;
   };
 
@@ -791,7 +511,6 @@ function App() {
       <AdminPanel
         adminName={authUser}
         email={authEmail}
-        fallbackProducts={demoFallbackProducts}
         onLogout={() => {
           localStorage.removeItem("net_store_user");
           localStorage.removeItem("net_store_email");
@@ -821,388 +540,24 @@ function App() {
       />
     );
 
+  const cartProps = { cart, products, onQuantity: changeQuantity, onRemove: id => setCart(items => items.filter(item => item._id !== id)), onAdd: addToCart,
+    onView: product => { setCartOpen(false); setCartPageOpen(false); viewProduct(product); },
+    onCheckout: () => { setCartOpen(false); setCartPageOpen(false); setCheckoutOpen(true); },
+    coupon: appliedCoupon, couponCode: Object.keys(coupons).find(code => coupons[code] === appliedCoupon), couponInput, onCouponInput: setCouponInput,
+    onApplyCoupon: applyCoupon, couponMessage, syncMessage: cartSyncMessage };
   return (
     <div className="storefront">
-      <header className="topbar">
-        <a className="brand" href="#top">
-          <span className="brand-mark">N</span>
-          <span>NET STORE</span>
-        </a>
-        <nav>
-          <a href="#shop">Cửa hàng</a>
-        </nav>
-        <div className="header-actions">
-          <div className="search-box">
-            <Search size={18} />
-            <input
-              value={search}
-              onFocus={() => setSearchFocused(true)}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setSearchFocused(true);
-              }}
-              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-              placeholder="Tìm sản phẩm"
-            />
-            {searchFocused && search.trim() && (
-              <div className="search-suggestions">
-                {suggestions.length ? (
-                  suggestions.map((product) => (
-                    <button
-                      key={product._id}
-                      onMouseDown={() => {
-                        setSearch(product.name);
-                        setSearchFocused(false);
-                        document
-                          .getElementById("shop")
-                          ?.scrollIntoView({ behavior: "smooth" });
-                      }}
-                    >
-                      <img src={product.images?.[0]} alt="" />
-                      <span>{product.name}</span>
-                      <small>{product.category}</small>
-                    </button>
-                  ))
-                ) : (
-                  <p>Không có sản phẩm bắt đầu bằng “{search}”.</p>
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            className="support-button"
-            onClick={() =>
-              window.open(
-                `${window.location.origin}/?support=1`,
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
-          >
-            <CircleHelp size={17} />
-            <span>Hỗ Trợ</span>
-          </button>
-          <button className="profile-trigger" onClick={openProfile}>
-            <UserRound size={17} />
-            <span>{authUser}</span>
-          </button>
-          <button
-            className="logout-button"
-            onClick={() => {
-              localStorage.removeItem("net_store_user");
-              localStorage.removeItem("net_store_email");
-              localStorage.removeItem("net_store_role");
-              localStorage.removeItem("net_store_token");
-              setAuthUser(null);
-              setAuthToken("");
-            }}
-            aria-label="Đăng xuất"
-          >
-            <LogOut size={18} />
-          </button>
-          <button
-            className="cart-button"
-            onClick={() => setCartOpen(true)}
-            aria-label="Mở giỏ hàng"
-          >
-            <ShoppingBag size={20} />
-            <span>{cartCount}</span>
-          </button>
-        </div>
-      </header>
+      <StoreHeader products={products} catalog={catalog} user={authUser} search={search} onSearch={setSearch} searchFocused={searchFocused} onSearchFocus={setSearchFocused} suggestions={suggestions} category={category} onCategory={setCategory} cartCount={cartCount} onCart={() => setCartOpen(true)} onProfile={openProfile} onOrders={() => { openProfile(); setAccountTab("orders"); }} onLogout={() => {
+        ["user", "email", "role", "token"].forEach(key => localStorage.removeItem("net_store_" + key));
+        setAuthUser(null); setAuthToken("");
+      }} />
       <main id="top">
-        <AdvertisingSection onShopClick={() => document.getElementById("shop")?.scrollIntoView({ behavior: "smooth" })} />
-        <section className="shop-section" id="shop">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">NET MARKET / DEAL HÔM NAY</p>
-              <h2>
-                Đồ dùng tốt
-                <br />
-                <em>giá tốt mỗi ngày.</em>
-              </h2>
-            </div>
-            <p className="section-note">
-              Mua sắm nhanh, chọn sản phẩm chất lượng và nhận ưu đãi riêng cho
-              từng món.
-            </p>
-          </div>
-          <div className="category-row">
-            {categories.map((item) => (
-              <button
-                className={category === item ? "category active" : "category"}
-                key={item}
-                onClick={() => setCategory(item)}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-          {visibleProducts.length === 0 ? (
-            <div className="no-results">
-              <Search size={30} />
-              <h3>Không tìm thấy sản phẩm</h3>
-              <p>Thử từ khóa khác hoặc chọn danh mục “Tất cả”.</p>
-              <button
-                onClick={() => {
-                  setSearch("");
-                  setCategory("Tất cả");
-                }}
-              >
-                Xóa bộ lọc
-              </button>
-            </div>
-          ) : (
-            <div className="product-grid">
-              {visibleProducts.map((product) => (
-                <article
-                  className="product-card"
-                  key={product._id}
-                  onClick={() => setSelectedProduct(product)}
-                >
-                  <div className="product-image">
-                    <span className="sale-badge">
-                      -{product.discountPercent}%
-                    </span>
-                    <img src={product.images?.[0]} alt={product.name} />
-                    <button
-                      className="add-button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        addToCart(product);
-                      }}
-                      aria-label={`Thêm ${product.name} vào giỏ`}
-                    >
-                      <Plus size={20} />
-                    </button>
-                  </div>
-                  <div className="product-info">
-                    <p>{product.category}</p>
-                    <span className="product-brand">{product.brand}</span>
-                    <h3>{product.name}</h3>
-                    <button
-                      className="product-seller-link"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSellerShop(product);
-                      }}
-                    >
-                      <Store size={13} />
-                      {product.sellerName}
-                    </button>
-                    <div className="rating-row">
-                      <span>★ 4.9</span>
-                      <span>Đã bán {product.sold}+</span>
-                    </div>
-                    <div className="price-row">
-                      <strong>{formatPrice(product.price)}</strong>
-                      <del>{formatPrice(product.originalPrice)}</del>
-                    </div>
-                    <span className="shipping-label">Miễn phí vận chuyển</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-        <section className="story" id="story">
-          <div className="story-image">
-            <img
-              src="https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=1000&q=85"
-              alt="Không gian sống tối giản"
-            />
-          </div>
-          <div className="story-copy">
-            <p className="eyebrow">NET / PHILOSOPHY</p>
-            <h2>
-              Mua ít hơn.
-              <br />
-              <em>Chọn đúng hơn.</em>
-            </h2>
-            <p>
-              Chúng tôi tin một sản phẩm tốt không cần nói quá nhiều. Nó chỉ cần
-              làm đúng việc của mình, bền bỉ theo thời gian và khiến bạn muốn
-              cầm lên mỗi ngày.
-            </p>
-            <a className="text-link" href="#shop">
-              Xem bộ sưu tập <ArrowRight size={18} />
-            </a>
-          </div>
-        </section>
+        <HomePage loading={productLoading} error={productError} onRetry={() => { setProductLoading(true); setProductReload(value => value + 1); }} products={products} catalog={catalog} history={viewHistory} cart={cart} category={category} onCategory={setCategory} search={search} onSearch={setSearch} onView={viewProduct} onAdd={addToCart} onBuy={product => { addToCart(product); setCheckoutOpen(true); }} onShop={setSellerShop} />
       </main>
-      <footer id="contact">
-        <div className="brand">
-          <span className="brand-mark">N</span>
-          <span>NET STORE</span>
-        </div>
-        <p>Đồ dùng tử tế cho nhịp sống hiện đại.</p>
-        <span>© 2026 NET</span>
-      </footer>
-      {cartOpen && (
-        <div className="overlay" onClick={() => setCartOpen(false)}>
-          <aside
-            className="cart-panel"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="panel-header">
-              <div>
-                <p className="eyebrow">GIỎ HÀNG CỦA BẠN</p>
-                <h2>{cartCount} sản phẩm</h2>
-              </div>
-              <button onClick={() => setCartOpen(false)} aria-label="Đóng">
-                <X />
-              </button>
-            </div>
-            {cartSyncMessage && (
-              <p role="alert" className="coupon-error">
-                Chưa đồng bộ được giỏ hàng với máy chủ: {cartSyncMessage}
-              </p>
-            )}
-            {cart.length === 0 ? (
-              <div className="empty-cart">
-                <ShoppingBag size={42} />
-                <p>Giỏ hàng đang trống.</p>
-              </div>
-            ) : (
-              <>
-                <div className="cart-items">
-                  {cart.map((item) => (
-                    <div className="cart-item" key={item._id}>
-                      <img src={item.images?.[0]} alt="" />
-                      <div>
-                        <h3>{item.name}</h3>
-                        <strong>{formatPrice(item.price)}</strong>
-                        <div className="quantity">
-                          <button onClick={() => changeQuantity(item._id, -1)}>
-                            <Minus size={14} />
-                          </button>
-                          <span>{item.quantity}</span>
-                          <button onClick={() => changeQuantity(item._id, 1)}>
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="coupon-box">
-                  <div>
-                    <input
-                      value={couponInput}
-                      onChange={(event) => setCouponInput(event.target.value)}
-                      placeholder="Mã giảm giá"
-                    />
-                    <button onClick={applyCoupon}>Áp dụng</button>
-                  </div>
-                  {couponMessage && (
-                    <small
-                      className={
-                        appliedCoupon ? "coupon-success" : "coupon-error"
-                      }
-                    >
-                      {couponMessage}
-                    </small>
-                  )}
-                </div>
-                <div className="cart-total">
-                  <span>Tạm tính</span>
-                  <strong>{formatPrice(cartTotal)}</strong>
-                </div>
-                {discount > 0 && (
-                  <div className="cart-total discount-row">
-                    <span>Giảm giá</span>
-                    <strong>-{formatPrice(discount)}</strong>
-                  </div>
-                )}
-                <div className="cart-total final-row">
-                  <span>Tổng cộng</span>
-                  <strong>{formatPrice(finalTotal)}</strong>
-                </div>
-                <button
-                  className="checkout-button"
-                  onClick={() => {
-                    setCartOpen(false);
-                    setCheckoutOpen(true);
-                  }}
-                >
-                  Đặt hàng <ArrowRight size={18} />
-                </button>
-              </>
-            )}
-          </aside>
-        </div>
-      )}
-      {checkoutOpen && (
-        <div className="overlay" onClick={() => setCheckoutOpen(false)}>
-          <div
-            className="checkout-modal"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              className="modal-close"
-              onClick={() => setCheckoutOpen(false)}
-            >
-              <X />
-            </button>
-            {ordered ? (
-              <div className="success">
-                <span>
-                  <Check />
-                </span>
-                <h2>Đặt hàng thành công</h2>
-                <p>Cảm ơn bạn. Cửa hàng sẽ liên hệ để xác nhận đơn hàng.</p>
-                <button
-                  className="checkout-button"
-                  onClick={() => {
-                    setOrdered(false);
-                    setCheckoutOpen(false);
-                    setCart([]);
-                  }}
-                >
-                  Tiếp tục mua sắm
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="eyebrow">HOÀN TẤT ĐẶT HÀNG</p>
-                <h2>Thông tin nhận hàng</h2>
-                <p className="muted">
-                  Không cần thanh toán online. Bạn sẽ thanh toán khi nhận hàng.
-                </p>
-                <form
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    setOrderError("");
-                    const [fullName, phoneNumber, streetAddress] = Array.from(
-                      event.currentTarget.querySelectorAll("input, textarea"),
-                      (input) => input.value.trim(),
-                    );
-                    try {
-                      await submitWebOrder({
-                        fullName,
-                        phoneNumber,
-                        streetAddress,
-                        city: "Chưa cung cấp",
-                      });
-                      setOrdered(true);
-                    } catch (error) {
-                      setOrderError(error.message);
-                    }
-                  }}
-                >
-                  <input required placeholder="Họ và tên" />
-                  <input required type="tel" placeholder="Số điện thoại" />
-                  <textarea required placeholder="Địa chỉ nhận hàng" rows="3" />
-                  {orderError && <p className="coupon-error" role="alert">{orderError}</p>}
-                  <button className="checkout-button" type="submit">
-                    Xác nhận đặt hàng <ArrowRight size={18} />
-                  </button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <StoreFooter />
+      {cartOpen && <CartDrawer {...cartProps} onClose={() => setCartOpen(false)} onViewCart={() => { setCartOpen(false); setCartPageOpen(true); }} />}
+      {cartPageOpen && <CartPage {...cartProps} onClose={() => setCartPageOpen(false)} />}
+
       {selectedProduct && (
         <div className="overlay" onClick={() => setSelectedProduct(null)}>
           <div
@@ -1211,40 +566,33 @@ function App() {
           >
             <button
               className="modal-close"
+              aria-label="Đóng chi tiết sản phẩm"
               onClick={() => setSelectedProduct(null)}
             >
               <X />
             </button>
             <div className="detail-image">
-              <span className="sale-badge">
+              {selectedProduct.discountPercent > 0 && <span className="sale-badge">
                 -{selectedProduct.discountPercent}%
-              </span>
-              <img
-                src={selectedProduct.images?.[0]}
-                alt={selectedProduct.name}
-              />
+              </span>}
+              <ProductImage product={selectedProduct} />
             </div>
             <div className="detail-content">
-              <p className="breadcrumb">
-                Net Store &gt; {selectedProduct.category}
-              </p>
+              <CategoryBreadcrumb category={selectedProduct.categorySlug || selectedProduct.category} onCategory={value => { setCategory(value); setSelectedProduct(null); }} />
               <h2>{selectedProduct.name}</h2>
               <p className="detail-brand">Thương hiệu: {selectedProduct.brand}</p>
               <div className="detail-rating">
-                <span>★ 4.9</span>
-                <span>{selectedProduct.sold}+ đã bán</span>
-                <span>Đã kiểm chứng</span>
+                <span>{productRating(selectedProduct) > 0 ? `★ ${productRating(selectedProduct).toFixed(1)}` : "Chưa có đánh giá"}</span>
+                <span>{productSold(selectedProduct) > 0 ? `${productSold(selectedProduct)} đã bán` : "Chưa có lượt bán"}</span>
               </div>
               <div className="detail-price">
                 <strong>{formatPrice(selectedProduct.price)}</strong>
-                <del>{formatPrice(selectedProduct.originalPrice)}</del>
-                <b>Giảm {selectedProduct.discountPercent}%</b>
+                {selectedProduct.discountPercent > 0 && <><del>{formatPrice(selectedProduct.originalPrice)}</del><b>Giảm {selectedProduct.discountPercent}%</b></>}
               </div>
               <div className="voucher-list">
                 <p>Voucher của shop</p>
-                <span>Giảm {selectedProduct.discountPercent}%</span>
-                <span>Miễn phí vận chuyển</span>
-                <span>Hoàn xu 5%</span>
+                <span>NET10 · Giảm 10%</span>
+                <span>WELCOME50 · Giảm 50.000đ</span>
               </div>
               <p className="detail-description">
                 {selectedProduct.description}
@@ -1416,11 +764,11 @@ function App() {
                       key={product._id}
                       onClick={() => {
                         setSellerShop(null);
-                        setSelectedProduct(product);
+                        viewProduct(product);
                       }}
                     >
                       <div className="product-image">
-                        <img src={product.images?.[0]} alt={product.name} />
+                        <ProductImage product={product} />
                       </div>
                       <div className="product-info">
                         <span className="product-brand">{product.brand}</span>
@@ -1437,9 +785,9 @@ function App() {
         </div>
       )}
       {checkoutOpen && !ordered && (
-        <div className="checkout-overlay">
-          <CheckoutPanel cart={cart} total={finalTotal} discount={discount} onBack={() => setCheckoutOpen(false)} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
-        </div>
+        <Dialog label="Thanh toán" className="checkout-overlay checkout-dialog" onClose={() => setCheckoutOpen(false)}>
+          <CheckoutPanel authToken={authToken} authEmail={authEmail} cart={cart} coupon={appliedCoupon} couponCode={cartProps.couponCode} couponInput={couponInput} onCouponInput={setCouponInput} onApplyCoupon={applyCoupon} couponMessage={couponMessage} onBack={() => { setCheckoutOpen(false); setCartPageOpen(true); }} onComplete={() => setOrdered(true)} onSubmitOrder={submitWebOrder} />
+        </Dialog>
       )}
       {checkoutOpen && ordered && (
         <div className="overlay">
@@ -1499,7 +847,7 @@ function App() {
               ) : accountTab === "bank" ? (
                 <BankPanel email={authEmail} />
               ) : accountTab === "addresses" ? (
-                <AddressPanel email={authEmail} />
+                <AddressPanel email={authEmail} authToken={authToken} />
               ) : accountTab === "password" ? (
                 <PasswordPanel email={authEmail} />
               ) : accountTab === "orders" ? (
@@ -1659,7 +1007,7 @@ function PasswordPanel({ email }) {
     }
   };
 
-  return <><p className="eyebrow">BẢO MẬT TÀI KHOẢN</p><h2>Đổi mật khẩu</h2><p className="profile-subtitle">Cập nhật mật khẩu để bảo vệ tài khoản Net của bạn.</p><div className="profile-divider"/><form className="profile-form password-form" onSubmit={changePassword}><label>Mật khẩu hiện tại<input required type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} placeholder="Nhập mật khẩu hiện tại"/></label><label>Mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} placeholder="Tối thiểu 6 ký tự"/><small>Nên dùng mật khẩu riêng, khó đoán và không dùng lại ở nơi khác.</small></label><label>Xác nhận mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} placeholder="Nhập lại mật khẩu mới"/></label>{message && <p className={message.startsWith("Đã") ? "profile-success" : "auth-error"}>{message}</p>}<button className="profile-save" type="submit" disabled={saving}>{saving ? "Đang lưu..." : "Đổi mật khẩu"}</button></form></>;
+  return <><p className="eyebrow">Bảo mật tài khoản</p><h2>Đổi mật khẩu</h2><p className="profile-subtitle">Cập nhật mật khẩu để bảo vệ tài khoản Net của bạn.</p><div className="profile-divider"/><form className="profile-form password-form" onSubmit={changePassword}><label>Mật khẩu hiện tại<input required type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} placeholder="Nhập mật khẩu hiện tại"/></label><label>Mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} placeholder="Tối thiểu 6 ký tự"/><small>Nên dùng mật khẩu riêng, khó đoán và không dùng lại ở nơi khác.</small></label><label>Xác nhận mật khẩu mới<input required minLength="6" type="password" autoComplete="new-password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} placeholder="Nhập lại mật khẩu mới"/></label>{message && <p className={message.startsWith("Đã") ? "profile-success" : "auth-error"}>{message}</p>}<button className="profile-save" type="submit" disabled={saving}>{saving ? "Đang lưu..." : "Đổi mật khẩu"}</button></form></>;
 }
 
 function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
@@ -1672,17 +1020,9 @@ function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
           <span>NET STORE</span>
         </a>
         <div className="auth-quote">
-          <p className="eyebrow">MỘT KHỞI ĐẦU ĐẸP</p>
-          <h1>
-            Những điều
-            <br />
-            <em>tử tế bắt đầu</em>
-            <br />
-            từ hôm nay.
-          </h1>
+          <h1>Mua sắm từ các gian hàng trên NET STORE</h1>
           <p>
-            Đăng nhập để lưu sản phẩm yêu thích và tiếp tục hành trình mua sắm
-            của bạn.
+            Lưu sản phẩm yêu thích, quản lý giỏ hàng và theo dõi đơn hàng.
           </p>
         </div>
         <span className="auth-caption">
@@ -1691,10 +1031,7 @@ function AuthScreen({ mode, setMode, form, setForm, error, onSubmit }) {
       </div>
       <div className="auth-panel">
         <div className="auth-panel-inner">
-          <p className="eyebrow">
-            {isRegister ? "TẠO TÀI KHOẢN" : "CHÀO MỪNG TRỞ LẠI"}
-          </p>
-          <h2>{isRegister ? "Bắt đầu hành trình." : "Đăng nhập vào Net."}</h2>
+          <h2>{isRegister ? "Tạo tài khoản" : "Đăng nhập"}</h2>
           <p className="auth-description">
             {isRegister
               ? "Tạo tài khoản để trải nghiệm cửa hàng trọn vẹn hơn."
@@ -1832,7 +1169,7 @@ function PromotionPanel() {
     <>
       <div className="promotion-top">
         <div>
-          <p className="eyebrow">THÔNG BÁO & KHUYẾN MÃI</p>
+          <p className="eyebrow">Thông báo & khuyến mãi</p>
           <h2>Ưu đãi dành cho bạn</h2>
         </div>
         <button>Đánh dấu đã đọc tất cả</button>

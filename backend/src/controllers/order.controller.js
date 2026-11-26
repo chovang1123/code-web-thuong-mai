@@ -1,8 +1,10 @@
+import { configured, bankChannel } from "../services/payment-gateways.js";
 import mongoose from "mongoose";
 import { Order } from "../models/order.model.js";
 import { Product } from "../models/product.model.js";
 import { Review } from "../models/review.model.js";
 import { Cart } from "../models/cart.model.js";
+import { priceWebOrder } from "../services/order-pricing.js";
 
 function isTransactionUnsupported(error) {
   return (
@@ -14,7 +16,7 @@ function isTransactionUnsupported(error) {
   );
 }
 
-async function createWebOrderWithoutTransactions(user, shippingAddress) {
+async function createWebOrderWithoutTransactions(user, shippingAddress, pricingOptions) {
   const cart = await Cart.findOne({ user: user._id });
   if (!cart?.items.length) {
     const error = new Error("Giỏ hàng đang trống.");
@@ -60,12 +62,12 @@ async function createWebOrderWithoutTransactions(user, shippingAddress) {
         fullName: shippingAddress.fullName.trim(),
         streetAddress: shippingAddress.streetAddress.trim(),
         city: shippingAddress.city.trim(),
-        state: shippingAddress.city.trim(),
+        state: shippingAddress.state?.trim() || shippingAddress.city.trim(),
         zipCode: shippingAddress.zipCode?.trim() || "",
         phoneNumber: shippingAddress.phoneNumber.trim(),
       },
       paymentResult: { status: "unpaid" },
-      totalPrice,
+      ...priceWebOrder(totalPrice, { ...pricingOptions, paymentMethod: "cod" }),
     });
 
     cart.items = [];
@@ -140,7 +142,13 @@ export async function createOrder(req, res) {
 export async function createWebOrder(req, res) {
   const session = await Order.startSession();
   try {
-    const { shippingAddress } = req.body;
+    const { shippingAddress, paymentMethod = "cod", expectedTotal, couponCode, checkoutReference } = req.body;
+    const online = paymentMethod !== "cod";
+    if (!["cod", "vnpay"].includes(paymentMethod)) return res.status(400).json({ message: "Phương thức thanh toán không hợp lệ." });
+    if (online && checkoutReference !== undefined && (typeof checkoutReference !== "string" || !/^[a-f0-9]{32}$/.test(checkoutReference))) {
+      return res.status(400).json({ message: "Mã yêu cầu đặt hàng không hợp lệ." });
+    }
+    if (online && !configured(paymentMethod)) return res.status(503).json({ message: "Cổng thanh toán chưa được cấu hình. Bạn có thể chọn COD." });
     const requiredAddressFields = [
       "fullName",
       "streetAddress",
@@ -161,7 +169,21 @@ export async function createWebOrder(req, res) {
     let createdOrder;
     try {
       await session.withTransaction(async () => {
+        if (online && checkoutReference) {
+          const previous = await Order.findOne({ user: req.user._id, checkoutReference }).session(session);
+          if (previous) {
+            createdOrder = previous;
+            return;
+          }
+        }
         const cart = await Cart.findOne({ user: req.user._id }).session(session);
+        if (online && req.body.expectedItems !== undefined) {
+          const expected = req.body.expectedItems;
+          if (!Array.isArray(expected) || expected.length !== cart?.items.length ||
+              !cart.items.every(item => expected.some(line => line?.product === String(item.product) && line.quantity === item.quantity))) {
+            throw Object.assign(new Error("Giỏ hàng đã thay đổi. Vui lòng tải lại trước khi thanh toán."), { statusCode: 409 });
+          }
+        }
         if (!cart?.items.length) {
           const error = new Error("Giỏ hàng đang trống.");
           error.statusCode = 400;
@@ -193,6 +215,7 @@ export async function createWebOrder(req, res) {
           });
         }
 
+        const pricing = priceWebOrder(totalPrice, { couponCode, expectedTotal, paymentMethod });
         const [order] = await Order.create(
           [
             {
@@ -203,12 +226,18 @@ export async function createWebOrder(req, res) {
                 fullName: shippingAddress.fullName.trim(),
                 streetAddress: shippingAddress.streetAddress.trim(),
                 city: shippingAddress.city.trim(),
-                state: shippingAddress.city.trim(),
+                state: shippingAddress.state?.trim() || shippingAddress.city.trim(),
                 zipCode: shippingAddress.zipCode?.trim() || "",
                 phoneNumber: shippingAddress.phoneNumber.trim(),
               },
-              paymentResult: { status: "unpaid" },
-              totalPrice,
+              paymentMethod,
+              checkoutReference: online ? checkoutReference : undefined,
+              orderStatus: online ? "pending" : "confirmed",
+              paymentStatus: "unpaid",
+              paymentChannel: online ? bankChannel(req.body.bankCode) : undefined,
+              expiresAt: online ? new Date(Date.now() + 15 * 60_000) : undefined,
+              paymentResult: { status: online ? "pending" : "unpaid" },
+              ...pricing,
             },
           ],
           { session },
@@ -220,9 +249,11 @@ export async function createWebOrder(req, res) {
       });
     } catch (error) {
       if (!isTransactionUnsupported(error)) throw error;
+      if (online) return res.status(503).json({ message: "Thanh toán trực tuyến cần MongoDB replica set. Bạn có thể chọn COD." });
       createdOrder = await createWebOrderWithoutTransactions(
         req.user,
         shippingAddress,
+        { couponCode, expectedTotal },
       );
     }
 
@@ -390,6 +421,7 @@ export async function advanceOrderStatuses(orders) {
   };
 
   for (const order of activeOrders) {
+    if (order.paymentMethod === "vnpay") continue;
     if (!["pending", "shipped", "shipping", "delivering"].includes(order.status)) {
       continue;
     }

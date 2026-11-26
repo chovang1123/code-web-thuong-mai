@@ -14,7 +14,7 @@ const emptyForm = {
 
 const provinces = ["Hà Nội", "TP. Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Bình Dương", "Đồng Nai", "Khánh Hòa", "Thừa Thiên Huế"];
 
-function AddressPanel({ email }) {
+function AddressPanel({ email, authToken }) {
   const [addresses, setAddresses] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
@@ -26,7 +26,7 @@ function AddressPanel({ email }) {
   const loadAddresses = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/auth/addresses?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`${apiUrl}/auth/addresses`, { headers: { Authorization: `Bearer ${authToken}` } });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Không thể tải danh sách địa chỉ.");
       setAddresses(data.addresses || []);
@@ -35,7 +35,7 @@ function AddressPanel({ email }) {
     } finally {
       setLoading(false);
     }
-  }, [apiUrl, email]);
+  }, [apiUrl, authToken]);
 
   useEffect(() => {
     loadAddresses();
@@ -62,7 +62,7 @@ function AddressPanel({ email }) {
     setMessage("");
     const endpoint = editingId ? `${apiUrl}/auth/addresses/${editingId}` : `${apiUrl}/auth/addresses`;
     try {
-      const response = await fetch(endpoint, { method: editingId ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...form, email }) });
+      const response = await fetch(endpoint, { method: editingId ? "PUT" : "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ ...form, email }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Không thể lưu địa chỉ.");
       setFormOpen(false);
@@ -76,7 +76,7 @@ function AddressPanel({ email }) {
 
   const setDefault = async (id) => {
     try {
-      const response = await fetch(`${apiUrl}/auth/addresses/${id}/default`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+      const response = await fetch(`${apiUrl}/auth/addresses/${id}/default`, { method: "PUT", headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ email }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Không thể đặt địa chỉ mặc định.");
       setMessage("Đã đặt địa chỉ mặc định.");
@@ -89,7 +89,7 @@ function AddressPanel({ email }) {
   const removeAddress = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa địa chỉ này?")) return;
     try {
-      const response = await fetch(`${apiUrl}/auth/addresses/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+      const response = await fetch(`${apiUrl}/auth/addresses/${id}`, { method: "DELETE", headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` }, body: JSON.stringify({ email }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Không thể xóa địa chỉ.");
       setMessage("Đã xóa địa chỉ.");

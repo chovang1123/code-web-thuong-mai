@@ -78,6 +78,17 @@ const orderSchema = new mongoose.Schema(
       type: shippingAddressSchema,
       required: true,
     },
+    paymentMethod: { type: String, enum: ["cod", "vnpay"], default: "cod" },
+    paymentChannel: String,
+    vnpTxnRef: { type: String, index: true, unique: true, sparse: true },
+    paymentAppReturnUrl: String,
+    expiresAt: Date,
+    orderStatus: { type: String, enum: ["pending", "confirmed", "shipping", "delivered", "cancelled"] },
+    paymentStatus: { type: String, enum: ["unpaid", "paid", "failed", "refunded"] },
+    paymentExpiresAt: Date, // hạn của đơn cũ
+    checkoutReference: String,
+
+    paidAt: Date,
     paymentResult: {
       id: String,
       status: String,
@@ -87,6 +98,9 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    subtotal: { type: Number, min: 0 },
+    couponCode: { type: String, trim: true },
+    discountAmount: { type: Number, min: 0 },
     status: {
       type: String,
       enum: [
@@ -113,6 +127,25 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+orderSchema.index({ paymentMethod: 1, orderStatus: 1, expiresAt: 1 });
+orderSchema.pre("validate", function () {
+  // Đồng bộ các luồng giao hàng cũ vẫn ghi status.
+  if (!this.orderStatus || this.isModified("status")) {
+    const stages = { shipped: "shipping", shipping: "shipping", delivering: "shipping",
+      delivered: "delivered", completed: "delivered", cancelled: "cancelled", returning: "delivered" };
+    this.orderStatus = stages[this.status] || (this.paymentMethod === "cod" || this.paymentStatus === "paid" ? "confirmed" : "pending");
+  }
+  this.paymentStatus ??= "unpaid";
+  if (this.paymentMethod === "cod" && this.orderStatus === "delivered" && this.paymentStatus !== "refunded") {
+    this.paymentStatus = "paid";
+    this.paymentResult.status = "paid";
+    this.paidAt ??= new Date();
+  }
+});
+orderSchema.index({ user: 1, checkoutReference: 1 }, {
+  unique: true, partialFilterExpression: { checkoutReference: { $type: "string" } },
+});
 
 orderSchema.index(
   { user: 1, sourceOrderId: 1 },
