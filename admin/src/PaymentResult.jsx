@@ -5,6 +5,7 @@ export default function PaymentResult() {
   const params = new URLSearchParams(location.search);
   const id = params.get("orderId");
   const cancelled = params.get("cancelled") === "1";
+  const returnedFailure = params.get("result") === "failed";
   const token = localStorage.getItem("net_store_token");
   const [order, setOrder] = useState(null);
   const [done, setDone] = useState(false);
@@ -49,7 +50,7 @@ export default function PaymentResult() {
   else if (order?.paymentMethod === "cod") title = "Đã đổi sang thanh toán khi nhận hàng";
   else if (order?.orderStatus === "cancelled") title = "Đơn hàng đã hủy";
   else if (order && cancelled) title = "Bạn đã hủy thanh toán";
-  else if (order?.paymentStatus === "failed") title = "Thanh toán thất bại";
+  else if (order?.paymentStatus === "failed" || (order && returnedFailure)) title = "Thanh toán thất bại";
   else if (order?.paymentStatus === "refunded") title = "Đã hoàn tiền";
 
   return <main className="checkout-content payment-result"><section className="checkout-card" aria-live="polite">

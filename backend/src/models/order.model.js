@@ -81,6 +81,7 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: { type: String, enum: ["cod", "vnpay"], default: "cod" },
     paymentChannel: String,
     vnpTxnRef: { type: String, index: true, unique: true, sparse: true },
+    paymentAppReturnUrl: String,
     expiresAt: Date,
     orderStatus: { type: String, enum: ["pending", "confirmed", "shipping", "delivered", "cancelled"] },
     paymentStatus: { type: String, enum: ["unpaid", "paid", "failed", "refunded"] },

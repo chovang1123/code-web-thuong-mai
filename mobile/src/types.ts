@@ -5,8 +5,20 @@ export interface Product {
   price: number;
   stock: number;
   category: string;
+  categorySlug?: string;
+  tags?: string[];
+  gender?: string;
+  os?: string;
+  originalPrice?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  sold?: number;
+  salesLast7Days?: number;
+  createdAt?: string;
+  isPinned?: boolean;
   brand?: string;
   sellerName?: string;
+  sellerId?: string;
   images: string[];
 }
 
@@ -16,6 +28,7 @@ export interface User {
   email: string;
   role: string;
   phone?: string;
+  address?: string;
 }
 
 export interface Session {
@@ -37,7 +50,17 @@ export interface ShippingAddress {
   phoneNumber: string;
   streetAddress: string;
   city: string;
+  state?: string;
+  zipCode?: string;
 }
+
+export interface SavedAddress extends ShippingAddress {
+  _id: string;
+  label: string;
+  state: string;
+  isDefault: boolean;
+}
+export type AddressInput = Omit<SavedAddress, '_id'>;
 
 export type PaymentMethod = 'cod' | 'vnpay';
 
@@ -48,6 +71,7 @@ export interface Order {
   paymentStatus?: string;
   expiresAt?: string;
   paymentResult?: { status?: string };
+  sellerTotal?: number;
   _id: string;
   createdAt: string;
   status: string;
@@ -59,5 +83,20 @@ export interface Order {
     price: number;
     quantity: number;
     image?: string;
+    sellerStatus?: string;
   }[];
+}
+
+export interface UploadedImage { url: string; publicId: string }
+export interface LocalImage { uri: string; name: string; type: string }
+export interface SellerProductInput {
+  name: string; description: string; category: string; tags: string;
+  brand: string; gender: string; os: string; price: number; stock: number; image?: UploadedImage;
+}
+export interface SellerDashboard {
+  shop: { name: string; location: string; owner: string };
+  stats: { revenue: number; orders: number; products: number; lowStock: number };
+  chart: { label: string; revenue: number }[];
+  products: Product[];
+  orders: Order[];
 }

@@ -1,4 +1,17 @@
-# Kết quả kiểm thử — 11/11/2026
+# Kết quả kiểm thử — 26/11/2026
+
+## UI, seller và VNPay Android
+
+- TypeScript, lint và Android bundle/Hermes đạt sau thay đổi. Jest có 40 ca trong 5 bộ: API, phiên/role, màn hình checkout/kết quả/địa chỉ, danh mục/phân trang và seller.
+- Địa chỉ mặc định: test lưu từ Tài khoản, khởi tạo store mới rồi mở checkout vẫn đọc đúng số điện thoại/địa chỉ; mặc định trên web được dùng; địa chỉ tạm không ghi đè; lưu lỗi giữ biểu mẫu và retry PUT đúng địa chỉ; response của phiên đã đăng xuất bị loại. API dùng Bearer, không tìm tài khoản qua email. Chỉ test bằng phản hồi API giả lập, không lưu địa chỉ thử vào tài khoản thật.
+- Android thực tế: reload Expo Go để bỏ đối tượng store cũ do Fast Refresh giữ lại, sau đó xác minh địa chỉ và số điện thoại có sẵn hiển thị nhất quán ở Tài khoản và checkout. Thao tác này chỉ đọc, không sửa địa chỉ hay tạo đơn thật.
+- Backend có 36 ca đạt, gồm DB replica set tạm: URL mobile/dev/production, ràng buộc deep link, chữ ký sai, amount sai, hủy, return về app, IPN cập nhật và callback lặp. Không tạo đơn hay sửa tồn kho trên database thật để test.
+- Kiểm tra trực tiếp Expo Go SDK57 trên Android 16: trang chủ tải 1.023 sản phẩm thật thành các nhóm hữu hạn; chọn Công nghệ hiển thị cha/con và danh sách 12/trang. Nội dung vừa màn hình, cùng màu cam/ngọc và nền trung tính của web. Metro đang kiểm tra ở cổng 8083 vì 8082 đã bị chiếm.
+- Seller được kiểm tra bằng component/API fixtures: phân trang 10, tìm kiếm reset trang, sửa giữ ảnh cũ, chọn file mới upload qua backend rồi gửi tham chiếu ảnh, chặn gửi đơn VNPay chưa trả tiền. Chưa đăng nhập seller thật hoặc tạo sản phẩm thật trong đợt này.
+- Checkout test chứng minh VNPay mở ngay sau khi tạo đơn chờ; query `result=paid` không thể tạo thông báo thành công khi API còn unpaid. API paid mới hiển thị thành công. Return metadata được ràng buộc với đúng order và tài khoản.
+- **Chưa xác minh thanh toán NCB trọn luồng trên Android.** Cấu hình local `VNPAY_IPN_URL` còn trống; cần tunnel public/đăng ký IPN với VNPay rồi thực hiện các bước trong README. Bản build với scheme `netstore` và điện thoại thật còn cần kiểm tra riêng; screenshot UI không chứng minh kết nối callback ngân hàng.
+
+## Kết quả lịch sử — 11/11/2026
 
 ## Đã kiểm tra
 

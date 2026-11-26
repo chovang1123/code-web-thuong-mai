@@ -1,6 +1,6 @@
 import { ApiError, errorMessage, type StoreApi } from '../lib/api';
 import { validateAddress } from '../lib/format';
-import type { CartItem, PaymentMethod, Session, ShippingAddress } from '../types';
+import type { AddressInput, CartItem, LocalImage, PaymentMethod, SellerProductInput, Session, ShippingAddress } from '../types';
 
 export interface SessionStorage {
   read(): Promise<Session | null>;
@@ -57,7 +57,7 @@ export class ShopStore {
       } finally {
         this.update({ ready: true });
       }
-      if (this.state.session) await this.refreshCart().catch(() => {});
+      if (this.state.session?.user.role === 'customer') await this.refreshCart().catch(() => {});
     })();
     return this.initTask;
   };
@@ -67,12 +67,12 @@ export class ShopStore {
     this.authBusy = true;
     try {
       const session = await this.api.login(email, password);
-      if (session.user.role !== 'customer') {
-        throw new Error('Bản Android này dành cho khách mua hàng. Tài khoản người bán/quản trị dùng trên website.');
+      if (!['customer', 'seller'].includes(session.user.role)) {
+        throw new Error('Tài khoản quản trị sử dụng trên website.');
       }
       await this.storage.write(session);
       this.changeSession(session);
-      await this.refreshCart().catch(() => {});
+      if (session.user.role === 'customer') await this.refreshCart().catch(() => {});
     } finally {
       this.authBusy = false;
     }
@@ -103,7 +103,7 @@ export class ShopStore {
   }
 
   refreshCart = async () => {
-    if (!this.state.session || this.state.cartBusy) return;
+    if (this.state.session?.user.role !== 'customer' || this.state.cartBusy) return;
     this.update({ cartBusy: true, cartError: '' });
     const generation = this.generation;
     try {
@@ -118,6 +118,7 @@ export class ShopStore {
   };
 
   changeQuantity = async (productId: string, delta: number | 'remove') => {
+    if (this.state.session?.user.role !== 'customer') throw new Error('Vui lòng dùng tài khoản khách mua hàng để mua sản phẩm.');
     if (this.state.cartBusy) throw new Error('Vui lòng chờ giỏ hàng cập nhật.');
     this.update({ cartBusy: true, cartError: '' });
     const generation = this.generation;
@@ -145,10 +146,29 @@ export class ShopStore {
   };
 
   orders = () => this.protectedRequest((token) => this.api.orders(token));
+  addresses = () => this.protectedRequest(token => this.api.addresses(token));
+  saveDefaultAddress = (address: AddressInput, id?: string) => this.protectedRequest(token => this.api.saveAddress(token, {
+    label: address.label.trim() || 'Nhà riêng', fullName: address.fullName.trim(),
+    phoneNumber: address.phoneNumber.replace(/[\s.-]/g, ''), streetAddress: address.streetAddress.trim(),
+    city: address.city.trim(), state: address.state.trim(), zipCode: address.zipCode?.trim() || '', isDefault: true,
+  }, id));
 
-  startPayment = (id: string) => this.protectedRequest(token => this.api.startPayment(token, id));
+  private sellerRequest<T>(action: (token: string) => Promise<T>) {
+    if (this.state.session?.user.role !== 'seller') return Promise.reject(new Error('Vui lòng đăng nhập tài khoản người bán.'));
+    return this.protectedRequest(action);
+  }
+  sellerDashboard = () => this.sellerRequest(token => this.api.sellerDashboard(token));
+  saveSellerProduct = (product: SellerProductInput, id?: string) => this.sellerRequest(token => this.api.saveSellerProduct(token, product, id));
+  deleteSellerProduct = (id: string) => this.sellerRequest(token => this.api.deleteSellerProduct(token, id));
+  updateSellerOrder = (id: string, status: 'shipped' | 'delivered') => this.sellerRequest(token => this.api.updateSellerOrder(token, id, status));
+  saveSellerProfile = (name: string, location: string) => this.sellerRequest(token => this.api.saveSellerProfile(token, name, location));
+  uploadSellerImage = (image: LocalImage) => this.sellerRequest(token => this.api.uploadSellerImage(token, image));
+
+  orderStatus = (id: string) => this.protectedRequest(token => this.api.orderStatus(token, id));
+  startPayment = (id: string, appReturnUrl?: string) => this.protectedRequest(token => this.api.startPayment(token, id, appReturnUrl));
 
   checkout = async (address: ShippingAddress, method: PaymentMethod = 'cod', expectedTotal?: number, bankCode?: string) => {
+    if (this.state.session?.user.role !== 'customer') throw new Error('Vui lòng đăng nhập tài khoản khách mua hàng.');
     const validation = validateAddress(address);
     if (validation) throw new Error(validation);
     if (this.state.cartBusy) throw new Error('Vui lòng chờ thao tác hiện tại hoàn tất.');
@@ -162,6 +182,8 @@ export class ShopStore {
         const shipping = {
           fullName: address.fullName.trim(), streetAddress: address.streetAddress.trim(),
           city: address.city.trim(), phoneNumber: address.phoneNumber.replace(/[\s.-]/g, ''),
+          ...(address.state !== undefined ? { state: address.state.trim() } : {}),
+          ...(address.zipCode !== undefined ? { zipCode: address.zipCode.trim() } : {}),
         };
         return method === 'cod' ? this.api.checkout(token, shipping) : this.api.checkout(token, shipping, method, expectedTotal, bankCode);
       });

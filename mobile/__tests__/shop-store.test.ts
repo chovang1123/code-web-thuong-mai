@@ -24,6 +24,15 @@ function setup(savedSession: Session | null = null) {
       return structuredClone(serverCart);
     }),
     orders: jest.fn<Promise<Order[]>, [string]>(async () => [order]),
+    addresses: jest.fn(async (_token: string) => []),
+    saveAddress: jest.fn(async (_token, address, _id) => ({ ...address, _id: 'address-1' })),
+    sellerDashboard: jest.fn(async (_token: string) => ({ shop: { name: 'Shop', location: 'HCM', owner: 'Seller' }, stats: { revenue: 0, orders: 0, products: 1, lowStock: 1 }, chart: [], products: [product], orders: [] })),
+    saveSellerProduct: jest.fn(async (_token, _product, _id) => ({ product })),
+    deleteSellerProduct: jest.fn(async (_token: string, _id: string) => ({})),
+    updateSellerOrder: jest.fn(async (_token, _id, _status) => ({})),
+    saveSellerProfile: jest.fn(async (_token: string, _name: string, _location: string) => ({})),
+    uploadSellerImage: jest.fn(async (_token, _image) => ({ url: 'https://cdn.test/image.png', publicId: 'products/image' })),
+    orderStatus: jest.fn(async (_token: string, _id: string) => ({ paymentStatus: 'unpaid', orderStatus: 'pending' })),
     startPayment: jest.fn(async (_token: string, _id: string) => ({ url: 'https://example.test/pay' })),
     checkout: jest.fn<Promise<Order>, [string, ShippingAddress]>(async () => { serverCart = { items: [] }; return order; }),
   };
@@ -38,6 +47,20 @@ test('restores the session and server cart; initialize is safe to call twice', a
   expect(storage.read).toHaveBeenCalledTimes(1);
   expect(api.cart).toHaveBeenCalledWith(session.token);
   expect(store.getSnapshot()).toMatchObject({ ready: true, cartLoaded: true, cart: [{ quantity: 2 }] });
+});
+
+test('saved delivery details are trimmed, sent with the current token and an old session response is discarded', async () => {
+  const { store, api } = setup(session);
+  await store.initialize();
+  await store.saveDefaultAddress({ ...address, label: ' Nhà riêng ', state: ' HCM ', isDefault: false }, 'a1');
+  expect(api.saveAddress).toHaveBeenCalledWith(session.token, expect.objectContaining({ fullName: 'Nguyễn An', phoneNumber: '0901234567', state: 'HCM', city: 'TP.HCM', streetAddress: '12 Nguyễn Trãi', isDefault: true }), 'a1');
+  let resolve!: (value: []) => void;
+  api.addresses.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+  const pending = store.addresses();
+  const rejected = expect(pending).rejects.toThrow('Phiên đăng nhập đã thay đổi');
+  await store.logout(); resolve([]);
+  await rejected;
+  expect(store.getSnapshot().session).toBeNull();
 });
 
 test('wrong password does not save a session or load private cart data', async () => {
@@ -61,12 +84,20 @@ test('uses the website customer account and encrypted session adapter on login/l
   expect(store.getSnapshot()).toMatchObject({ session: null, cart: [] });
 });
 
-test('seller/admin accounts are kept out of the customer app', async () => {
+test('seller sessions enter their own workspace without loading a customer cart; admins remain on web', async () => {
   const { store, api, storage } = setup();
   await store.initialize();
   api.login.mockResolvedValueOnce({ ...session, user: { ...session.user, role: 'seller' } });
-  await expect(store.login('seller@example.com', 'password')).rejects.toThrow('khách mua hàng');
-  expect(storage.write).not.toHaveBeenCalled();
+  await store.login('seller@example.com', 'password');
+  expect(store.getSnapshot().session?.user.role).toBe('seller');
+  expect(api.cart).not.toHaveBeenCalled();
+  await store.sellerDashboard();
+  expect(api.sellerDashboard).toHaveBeenCalledWith(session.token);
+  await expect(store.changeQuantity('p1', 1)).rejects.toThrow('khách mua hàng');
+  await store.logout();
+  api.login.mockResolvedValueOnce({ ...session, user: { ...session.user, role: 'admin' } });
+  await expect(store.login('admin@example.com', 'password')).rejects.toThrow('quản trị');
+  expect(storage.write).toHaveBeenCalledTimes(1);
 });
 
 test('re-reads the server cart before updates, preserving changes made on the web', async () => {

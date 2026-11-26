@@ -31,7 +31,7 @@ export default function ProductScreen() {
       <View style={[ui.card, { alignItems: 'center' }]}><ProductImage uri={product.images?.[0]} size={Math.min(width - 80, 300)} /></View>
       <View style={ui.card}>
         <Text style={ui.label}>{product.category}</Text><Text style={ui.title}>{product.name}</Text>
-        <Text style={ui.price}>{money(product.price)}</Text>
+        <Text style={[ui.price, { color: colors.danger }]}>{money(product.price)}</Text>
         <Text style={[ui.text, { color: product.stock ? colors.green : colors.danger }]}>{product.stock ? `Còn ${product.stock} sản phẩm` : 'Sản phẩm đã hết hàng'}</Text>
         {product.brand ? <Text style={ui.muted}>Thương hiệu: {product.brand}</Text> : null}
         {product.sellerName ? <Text style={ui.muted}>Cửa hàng: {product.sellerName}</Text> : null}

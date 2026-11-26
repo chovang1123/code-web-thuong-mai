@@ -6,10 +6,14 @@ import { Button, Empty, ErrorCard, Loading, ProductImage, ui } from '../../compo
 import { errorMessage } from '../../lib/api';
 import { cartTotal, money } from '../../lib/format';
 import { useShop } from '../../state/shop';
+import { paginate } from '../../lib/catalog';
+import { Pagination } from '../../components/catalog-controls';
 
 export default function CartScreen() {
   const { session, cart, cartBusy, cartLoaded, cartError, store } = useShop();
   const [actionError, setActionError] = useState('');
+  const [page, setPage] = useState(1);
+  const listing = paginate(cart, page, 10);
   useFocusEffect(useCallback(() => {
     setActionError('');
     if (session?.token) void store.refreshCart().catch(() => {});
@@ -26,13 +30,13 @@ export default function CartScreen() {
   return <ScrollView style={ui.screen} contentContainerStyle={ui.content}
     refreshControl={<RefreshControl refreshing={cartBusy} onRefresh={() => { void store.refreshCart().catch(() => {}); }} />}>
     <Text style={ui.title}>Giỏ hàng của bạn</Text>
-    <Text style={ui.muted}>Giỏ hàng dùng chung với website. Kéo xuống để lấy dữ liệu mới nhất.</Text>
+    <Text style={ui.muted}>{cart.length} sản phẩm · Đồng bộ với giỏ hàng trên web</Text>
     {cartError || actionError ? <ErrorCard message={actionError || cartError} onRetry={() => { setActionError(''); void store.refreshCart().catch(() => {}); }} /> : null}
     {!cartLoaded && cartBusy ? <Loading /> : null}
     {cartLoaded && !cart.length ? <Empty title="Giỏ hàng đang trống" message="Chọn sản phẩm bạn muốn mua để bắt đầu."><Button title="Khám phá sản phẩm" onPress={() => router.push('/(tabs)')} /></Empty> : null}
-    {cart.map((item, index) => item.product ? <View key={item.product._id} style={ui.card}>
-      <View style={ui.row}><ProductImage uri={item.product.images?.[0]} size={70} />
-        <View style={{ flex: 1, gap: 5 }}><Text style={ui.heading}>{item.product.name}</Text><Text style={ui.price}>{money(item.product.price)}</Text></View>
+    {listing.items.map((item, index) => item.product ? <View key={item.product._id} style={ui.card}>
+      <View style={ui.row}><ProductImage uri={item.product.images?.[0]} size={72} />
+        <View style={{ flex: 1, gap: 4 }}><Text style={ui.heading}>{item.product.name}</Text><Text style={ui.price}>{money(item.product.price)}</Text></View>
       </View>
       <View style={ui.between}>
         <View style={ui.row}>
@@ -44,6 +48,7 @@ export default function CartScreen() {
       </View>
       {item.quantity > item.product.stock ? <Text style={ui.muted}>Tồn kho đã thay đổi. Vui lòng giảm số lượng trước khi đặt hàng.</Text> : null}
     </View> : <ErrorCard key={`unavailable-${index}`} message="Sản phẩm đã bị xóa khỏi cửa hàng. Vui lòng xử lý sản phẩm này trong giỏ hàng trên website rồi tải lại." />)}
+    {cart.length > 10 && <Pagination {...listing} onChange={setPage} />}
     {cart.length > 0 ? <View style={ui.card}>
       <View style={ui.between}><Text style={ui.text}>Tạm tính</Text><Text style={ui.price}>{money(cartTotal(cart))}</Text></View>
       <Text style={ui.muted}>Giá và tồn kho sẽ được máy chủ kiểm tra khi xác nhận đơn.</Text>

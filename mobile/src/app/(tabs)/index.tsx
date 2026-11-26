@@ -1,41 +1,62 @@
-import { useMemo, useState } from 'react';
-import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
-import { colors, Empty, ErrorCard, Loading, ProductImage, ui } from '../../components/ui';
-import { money } from '../../lib/format';
+import { useMemo, useRef, useState } from 'react';
+import { FlatList, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { colors, Empty, ErrorCard, Field, Loading, ui } from '../../components/ui';
+import { Chip, ChipRow, Choice, Pagination, ProductTile } from '../../components/catalog-controls';
+import { categoryTree, emptyFilters, filterCatalog, filterFields, homeShelves, paginate, resolveCategory, type CatalogFilters } from '../../lib/catalog';
 import { useRemote } from '../../lib/use-remote';
 import { api } from '../../state/shop';
+import type { Product } from '../../types';
 
 export default function ProductsScreen() {
   const { data, loading, error, refresh } = useRemote(api.products);
-  const [query, setQuery] = useState('');
-  const products = useMemo(() => (data ?? []).filter((product) =>
-    `${product.name} ${product.category} ${product.brand ?? ''}`.toLocaleLowerCase('vi').includes(query.trim().toLocaleLowerCase('vi')),
-  ), [data, query]);
-  return <View style={ui.screen}>
-    <FlatList data={products} keyExtractor={(product) => product._id} numColumns={2}
-      contentContainerStyle={ui.content} columnWrapperStyle={{ gap: 12 }}
-      refreshing={loading && data !== null} onRefresh={() => { void refresh(); }}
-      ListHeaderComponent={<View style={{ gap: 16, paddingBottom: 4 }}>
-        <View style={[ui.card, { backgroundColor: colors.text, borderWidth: 0 }]}>
-          <Text style={[ui.label, { color: '#A9C3FF' }]}>NET STORE · ANDROID</Text>
-          <Text style={[ui.title, { color: colors.white }]}>Mua sắm trong tầm tay</Text>
-          <Text style={{ color: '#CBD5E1', lineHeight: 21 }}>Khám phá sản phẩm từ các cửa hàng trên Net Store.</Text>
-        </View>
-        <TextInput accessibilityLabel="Tìm sản phẩm" placeholder="Tìm theo tên, danh mục, thương hiệu…" placeholderTextColor={colors.muted}
-          value={query} onChangeText={setQuery} style={ui.input} returnKeyType="search" />
-        <View style={ui.between}><Text style={ui.heading}>Sản phẩm</Text><Text style={ui.muted}>{products.length} sản phẩm</Text></View>
-        {error ? <ErrorCard message={error} onRetry={() => { void refresh(); }} /> : null}
-      </View>}
-      ListEmptyComponent={loading ? <Loading /> : !error ? <Empty title={query ? 'Không có kết quả' : 'Chưa có sản phẩm'} message={query ? 'Thử từ khóa khác để tìm sản phẩm.' : 'Hãy thêm sản phẩm trên website rồi kéo xuống để tải lại.'} /> : null}
-      renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Xem ${item.name}`}
-        onPress={() => router.push({ pathname: '/product/[id]', params: { id: item._id } })}
-        style={({ pressed }) => [ui.card, { flex: 1, maxWidth: '50%', padding: 12, opacity: pressed ? 0.8 : 1 }]}>
-        <View style={{ alignItems: 'center' }}><ProductImage uri={item.images?.[0]} size={120} /></View>
-        <Text style={[ui.muted, { fontSize: 12 }]} numberOfLines={1}>{item.category}</Text>
-        <Text style={[ui.text, { fontWeight: '700', minHeight: 46 }]} numberOfLines={2}>{item.name}</Text>
-        <Text style={[ui.price, { fontSize: 17 }]}>{money(item.price)}</Text>
-        <Text style={[ui.muted, { color: item.stock > 0 ? colors.green : colors.danger }]}>{item.stock > 0 ? `Còn ${item.stock} sản phẩm` : 'Hết hàng'}</Text>
-      </Pressable>} />
+  const [filters, setFilters] = useState({ ...emptyFilters });
+  const [showFilters, setShowFilters] = useState(false);
+  const [browse, setBrowse] = useState(false);
+  const [page, setPage] = useState(1);
+  const list = useRef<FlatList<Product>>(null);
+  const { width } = useWindowDimensions();
+  const tileWidth = Math.floor((width - 44) / 2);
+  const products = data ?? [];
+  const tree = useMemo(() => categoryTree(data ?? []), [data]);
+  const visible = useMemo(() => filterCatalog(data ?? [], filters), [data, filters]);
+  const shelves = useMemo(() => homeShelves(data ?? []), [data]);
+  const selected = resolveCategory(filters.category);
+  const root = tree.find(node => node.slug === (selected?.parentSlug || selected?.slug));
+  const facets = filterFields(filters.category);
+  const listing = browse || Object.entries(filters).some(([key, value]) => key !== 'sort' && value !== '' && value !== false);
+  const result = paginate(visible, page);
+  const change = <K extends keyof CatalogFilters>(key: K, value: CatalogFilters[K]) => {
+    setFilters(current => key === 'category' ? { ...current, category: String(value), collection: '', brand: '', gender: '', os: '' } : { ...current, [key]: value });
+    setPage(1);
+  };
+  const selectCategory = (category: string) => { change('category', category); setBrowse(Boolean(category)); list.current?.scrollToOffset({ offset: 0, animated: false }); };
+  const header = <View style={{ gap: 16, marginBottom: 16 }}>
+    <View style={ui.between}><View style={{ flex: 1, gap: 4 }}><Text style={ui.label}>Net Store</Text><Text style={ui.title}>{selected?.name || (listing ? 'Tìm sản phẩm' : 'Chọn món hợp ý')}</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Bộ lọc" onPress={() => { setShowFilters(!showFilters); setBrowse(true); }} style={{ padding: 12, backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: 6 }}><Ionicons name="options-outline" size={20} color={colors.text} /></Pressable></View>
+    <View style={[ui.input, ui.row]}><Ionicons name="search-outline" size={18} color={colors.muted} /><TextInput accessibilityLabel="Tìm sản phẩm" placeholder="Tên sản phẩm, thương hiệu hoặc shop" placeholderTextColor={colors.muted} value={filters.query} onChangeText={value => change('query', value)} style={{ flex: 1, color: colors.text, fontSize: 14, padding: 0 }} returnKeyType="search" />{filters.query !== '' && <Pressable accessibilityRole="button" accessibilityLabel="Xóa tìm kiếm" onPress={() => change('query', '')}><Ionicons name="close-outline" size={20} color={colors.muted} /></Pressable>}</View>
+    <ChipRow><Chip label="Tất cả" selected={!filters.category} onPress={() => { setFilters({ ...emptyFilters }); setBrowse(false); setPage(1); }} />{tree.map(category => <Chip key={category.slug} label={category.name} selected={root?.slug === category.slug} onPress={() => selectCategory(category.slug)} />)}</ChipRow>
+    {root && root.children.length > 0 && <ChipRow><Chip label={`Tất cả ${root.name}`} selected={filters.category === root.slug} onPress={() => selectCategory(root.slug)} />{root.children.map(category => <Chip key={category.slug} label={category.name} selected={filters.category === category.slug} onPress={() => selectCategory(category.slug)} />)}</ChipRow>}
+    {showFilters && <View style={ui.card}>
+      <View style={ui.row}><View style={{ flex: 1 }}><Field label="Giá từ" keyboardType="numeric" value={filters.min} onChangeText={value => change('min', value)} placeholder="0" /></View><View style={{ flex: 1 }}><Field label="Giá đến" keyboardType="numeric" value={filters.max} onChangeText={value => change('max', value)} placeholder="Không giới hạn" /></View></View>
+      <Choice label="Sắp xếp" value={filters.sort} options={[{ value: 'newest', label: 'Mới nhất' }, { value: 'price-asc', label: 'Giá tăng dần' }, { value: 'price-desc', label: 'Giá giảm dần' }, { value: 'popular', label: 'Bán chạy' }]} onChange={value => change('sort', value)} />
+      {facets.brand && <Choice label="Thương hiệu" value={filters.brand} options={[{ value: '', label: 'Tất cả thương hiệu' }, ...[...new Set(products.map(product => product.brand).filter((brand): brand is string => Boolean(brand)))].map(brand => ({ value: brand, label: brand }))]} onChange={value => change('brand', value)} />}
+      {facets.gender && <Choice label="Giới tính" value={filters.gender} options={[{ value: '', label: 'Tất cả' }, { value: 'nam', label: 'Nam' }, { value: 'nu', label: 'Nữ' }, { value: 'unisex', label: 'Unisex' }]} onChange={value => change('gender', value)} />}
+      {facets.os && <Choice label="Hệ điều hành" value={filters.os} options={[{ value: '', label: 'Tất cả' }, { value: 'ios', label: 'iOS / iPadOS' }, { value: 'android', label: 'Android' }]} onChange={value => change('os', value)} />}
+      <View style={ui.between}><Chip label="Chỉ còn hàng" selected={filters.stock} onPress={() => change('stock', !filters.stock)} /><Pressable accessibilityRole="button" onPress={() => { setFilters({ ...emptyFilters }); setPage(1); }}><Text style={[ui.text, { color: colors.green }]}>Xóa bộ lọc</Text></Pressable></View>
+    </View>}
+    {error && <ErrorCard message={error} onRetry={() => { void refresh(); }} />}
+    {listing && <Text style={ui.muted}>{visible.length} sản phẩm · 12 sản phẩm mỗi trang</Text>}
   </View>;
+  const empty = loading && !data ? <Loading /> : !error ? <Empty title={listing ? 'Không có kết quả' : 'Chưa có sản phẩm'} message={listing ? 'Thử từ khóa hoặc danh mục khác' : 'Quay lại sau để xem các sản phẩm mới'} /> : null;
+  const home = !products.length ? empty : <>
+      <View style={[ui.between, { paddingBottom: 8 }]}><Text style={ui.muted}>{products.length} sản phẩm từ các gian hàng</Text><Pressable accessibilityRole="button" accessibilityLabel="Xem tất cả sản phẩm" onPress={() => { setBrowse(true); setPage(1); }}><Text style={{ color: colors.green, fontSize: 13, fontWeight: '500' }}>Xem tất cả</Text></Pressable></View>
+      {shelves.map(shelf => <View key={shelf.id} style={{ gap: 12, marginBottom: 16 }}>
+        <View style={ui.between}><Text style={[ui.heading, { flex: 1 }]}>{shelf.title}</Text><Pressable accessibilityRole="button" accessibilityLabel={`Xem tất cả ${shelf.title}`} onPress={() => { setBrowse(true); setFilters({ ...emptyFilters, category: shelf.category || '', collection: ['weekly', 'discounts'].includes(shelf.id) ? shelf.id : '' }); setPage(1); list.current?.scrollToOffset({ offset: 0, animated: false }); }} style={{ paddingVertical: 8 }}><Text style={{ color: colors.green, fontSize: 13 }}>Xem tất cả</Text></Pressable></View>
+        <FlatList horizontal data={shelf.products} keyExtractor={product => product._id} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }} renderItem={({ item }) => <ProductTile product={item} width={Math.min(tileWidth, 180)} />} />
+      </View>)}
+    </>;
+  return <View style={ui.screen}><FlatList ref={list} data={listing ? result.items : []} keyExtractor={product => product._id} numColumns={2} contentContainerStyle={ui.content} columnWrapperStyle={{ gap: 12 }} keyboardShouldPersistTaps="handled"
+    refreshing={loading && data !== null} onRefresh={() => { void refresh(); }} ListHeaderComponent={<View>{header}{!listing && home}</View>} ListEmptyComponent={listing ? empty : null}
+    renderItem={({ item }) => <ProductTile product={item} width={tileWidth} />}
+    ListFooterComponent={listing ? <Pagination {...result} onChange={value => { setPage(value); list.current?.scrollToOffset({ offset: 0, animated: false }); }} /> : null} /></View>;
 }

@@ -143,6 +143,10 @@
 .seller-alert { margin: 0 0 var(--space-4); padding: var(--space-3) var(--space-3); border: 1px solid; border-radius: var(--radius-card); font-size: var(--text-xs); line-height: 1.5; }
 .seller-alert-error { border-color: var(--border); color: var(--muted-ink); background: var(--surface); --muted-ink: var(--text-muted); }
 .seller-alert-success { border-color: var(--border); color: var(--text); background: var(--bg-page); --muted-ink: var(--text-muted-on-warm); }
+.seller-dismissible-alert { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.seller-dismissible-alert .seller-close-button { flex-shrink: 0; }
+.seller-image-help { margin: 0; color: var(--muted-ink); font-size: var(--text-xs); line-height: 1.5; }
+.seller-image-preview { width: 120px; height: 120px; border: 1px solid var(--border); border-radius: var(--radius-card); object-fit: contain; }
 .seller-loading { display: flex; min-height: 260px; align-items: center; justify-content: center; gap: var(--space-3); color: var(--muted-ink); font-size: var(--text-xs); }
 .seller-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--seller-accent); border-radius: 50%; animation: seller-spin .7s linear infinite; }
 @keyframes seller-spin { to { transform: rotate(360deg); } }

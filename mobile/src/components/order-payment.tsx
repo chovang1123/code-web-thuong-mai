@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
+import { openMobilePayment } from '../lib/payment';
 import { useShop } from '../state/shop';
 import { errorMessage } from '../lib/api';
 import type { Order } from '../types';
@@ -27,8 +28,7 @@ export function OrderPayment({ order }: { order: Order }) {
     setBusy(true);
     setError('');
     try {
-      const { url } = await store.startPayment(order._id);
-      await Linking.openURL(url);
+      await openMobilePayment(store, order._id);
     } catch (e) { setError(errorMessage(e)); }
     finally { setBusy(false); }
   }

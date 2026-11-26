@@ -1,4 +1,4 @@
-import type { Cart, Order, PaymentMethod, Product, Session, ShippingAddress } from '../types';
+import type { AddressInput, SavedAddress, Cart, LocalImage, Order, PaymentMethod, Product, SellerDashboard, SellerProductInput, Session, ShippingAddress, UploadedImage } from '../types';
 
 export class ApiError extends Error {
   constructor(message: string, public status: number) {
@@ -23,17 +23,18 @@ export function createApi(baseUrl: string, fetcher: (url: string, init?: Request
 
   async function request<T>(path: string, token?: string, method = 'GET', body?: unknown): Promise<T> {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), path.startsWith('/payments/') ? 40000 : 15000);
+    const timeout = setTimeout(() => controller.abort(), path.includes('/uploads') || path.startsWith('/payments/') ? 40000 : 15000);
+    const multipart = body instanceof FormData;
     try {
       const response = await fetcher(`${base}${path}`, {
         method,
         signal: controller.signal,
         headers: {
           Accept: 'application/json',
-          ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+          ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {}),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
@@ -62,7 +63,20 @@ export function createApi(baseUrl: string, fetcher: (url: string, init?: Request
     saveCart: async (token: string, items: { productId: string; quantity: number }[]) =>
       (await request<{ cart: Cart }>('/cart/web', token, 'PUT', { items })).cart,
     orders: async (token: string) => (await request<{ orders: Order[] }>('/orders/web', token)).orders,
-    startPayment: (token: string, id: string) => request<{ url: string }>('/vnpay/create', token, 'POST', { orderId: id }),
+    addresses: async (token: string) => (await request<{ addresses: SavedAddress[] }>('/auth/addresses', token)).addresses,
+    saveAddress: async (token: string, address: AddressInput, id?: string) => (await request<{ address: SavedAddress }>(`/auth/addresses${id ? `/${encodeURIComponent(id)}` : ''}`, token, id ? 'PUT' : 'POST', address)).address,
+    sellerDashboard: (token: string) => request<SellerDashboard>('/seller/dashboard', token),
+    saveSellerProduct: (token: string, product: SellerProductInput, id?: string) => request<{ product: Product }>(`/seller/products${id ? `/${encodeURIComponent(id)}` : ''}`, token, id ? 'PUT' : 'POST', product),
+    deleteSellerProduct: (token: string, id: string) => request(`/seller/products/${encodeURIComponent(id)}`, token, 'DELETE'),
+    updateSellerOrder: (token: string, id: string, status: 'shipped' | 'delivered') => request(`/seller/orders/${encodeURIComponent(id)}/status`, token, 'PATCH', { status }),
+    saveSellerProfile: (token: string, shopName: string, shopLocation: string) => request('/seller/profile', token, 'PUT', { shopName, shopLocation }),
+    uploadSellerImage: (token: string, image: LocalImage) => {
+      const form = new FormData();
+      form.append('image', image as unknown as Blob);
+      return request<UploadedImage>('/seller/uploads', token, 'POST', form);
+    },
+    orderStatus: (token: string, id: string) => request<Pick<Order, 'paymentStatus' | 'orderStatus' | 'paymentMethod' | 'expiresAt'>>(`/orders/${encodeURIComponent(id)}/status`, token),
+    startPayment: (token: string, id: string, appReturnUrl?: string) => request<{ url: string }>('/vnpay/create', token, 'POST', { orderId: id, ...(appReturnUrl ? { appReturnUrl } : {}) }),
     checkout: async (token: string, shippingAddress: ShippingAddress, paymentMethod?: PaymentMethod, expectedTotal?: number, bankCode?: string) =>
       (await request<{ order: Order }>('/orders/web', token, 'POST', { shippingAddress, paymentMethod, expectedTotal, bankCode })).order,
   };

@@ -1,4 +1,5 @@
 import { coupons, couponDiscount } from "../../../shared/coupons.mjs";
+import { validVnpayAmount } from "./payment-gateways.js";
 
 export function priceWebOrder(subtotal, { couponCode, expectedTotal, paymentMethod = "cod" } = {}) {
   if (couponCode != null && typeof couponCode !== "string") {
@@ -11,7 +12,7 @@ export function priceWebOrder(subtotal, { couponCode, expectedTotal, paymentMeth
   const discountAmount = couponDiscount(subtotal, code ? coupons[code] : undefined);
   const totalPrice = subtotal - discountAmount;
   if (!Number.isSafeInteger(subtotal) || subtotal < 0 || !Number.isSafeInteger(totalPrice) || totalPrice < 0 ||
-      (paymentMethod === "vnpay" && (totalPrice < 5000 || totalPrice > 999999999)) ||
+      (paymentMethod === "vnpay" && !validVnpayAmount(totalPrice)) ||
       (expectedTotal !== undefined && expectedTotal !== totalPrice)) {
     throw Object.assign(new Error("Tổng tiền đã thay đổi hoặc nằm ngoài hạn mức. Vui lòng kiểm tra lại giỏ hàng."), { statusCode: 400 });
   }

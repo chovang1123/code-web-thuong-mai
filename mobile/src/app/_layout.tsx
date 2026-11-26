@@ -9,9 +9,11 @@ function Navigation() {
   if (!ready) return <Loading text="Đang mở Net Store…" />;
   return <Stack screenOptions={{ headerTintColor: colors.text, headerShadowVisible: false, contentStyle: { backgroundColor: colors.background } }}>
     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <Stack.Screen name="(seller)" options={{ headerShown: false }} />
     <Stack.Screen name="product/[id]" options={{ title: 'Chi tiết sản phẩm' }} />
     <Stack.Screen name="login" options={{ title: 'Đăng nhập' }} />
     <Stack.Screen name="checkout" options={{ title: 'Xác nhận đặt hàng' }} />
+    <Stack.Screen name="payment-result" options={{ title: 'Kết quả thanh toán' }} />
   </Stack>;
 }
 

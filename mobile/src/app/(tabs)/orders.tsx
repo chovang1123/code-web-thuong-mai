@@ -1,42 +1,32 @@
-import { useCallback, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { FlatList, Text, TextInput, View } from 'react-native';
 import { SignInPrompt } from '../../components/sign-in-prompt';
-import { Button, colors, Empty, ErrorCard, Loading, ui } from '../../components/ui';
-import { dateTime, money, orderStatuses } from '../../lib/format';
+import { colors, Empty, ErrorCard, Loading, ui } from '../../components/ui';
+import { Chip, ChipRow, Pagination } from '../../components/catalog-controls';
+import { OrderSummary, orderLabel } from '../../components/order-summary';
+import { normalize, paginate } from '../../lib/catalog';
 import { useRemote } from '../../lib/use-remote';
 import { useShop } from '../../state/shop';
-import { OrderPayment } from '../../components/order-payment';
 import type { Order } from '../../types';
-
-function OrderCard({ order }: { order: Order }) {
-  const [expanded, setExpanded] = useState(false);
-  return <View style={ui.card}>
-    <View style={ui.between}><Text style={ui.heading}>#{order._id.slice(-8).toUpperCase()}</Text><Text style={{ color: colors.primary, fontWeight: '700' }}>{order.orderStatus === 'confirmed' ? 'Đã xác nhận' : orderStatuses[order.orderStatus ?? order.status] ?? order.status}</Text></View>
-    <Text style={ui.muted}>{dateTime(order.createdAt)}</Text>
-    <Text style={ui.text}>{order.orderItems.map((item) => `${item.name} × ${item.quantity}`).join('\n')}</Text>
-    <OrderPayment order={order} />
-    <Text style={ui.price}>{money(order.totalPrice)}</Text>
-    <Button title={expanded ? 'Thu gọn' : 'Xem chi tiết'} variant="secondary" onPress={() => setExpanded(!expanded)} />
-    {expanded ? <View style={{ gap: 8 }}>
-      <Text selectable style={ui.muted}>Mã đơn đầy đủ: {order._id}</Text>
-      <Text style={ui.heading}>Giao đến</Text>
-      <Text style={ui.text}>{order.shippingAddress.fullName} · {order.shippingAddress.phoneNumber}</Text>
-      <Text style={ui.text}>{order.shippingAddress.streetAddress}, {order.shippingAddress.city}</Text>
-      {order.orderItems.map((item, index) => <Text key={item._id ?? index} style={ui.muted}>{item.name}: {money(item.price)} × {item.quantity}</Text>)}
-    </View> : null}
-  </View>;
-}
 
 export default function OrdersScreen() {
   const { session, store } = useShop();
   const loader = useCallback(() => session ? store.orders() : Promise.resolve([] as Order[]), [session, store]);
   const { data, loading, error, refresh } = useRemote(loader);
+  const [query, setQuery] = useState('');
+  const [stage, setStage] = useState('Tất cả');
+  const [page, setPage] = useState(1);
+  const list = useRef<FlatList<Order>>(null);
+  const filtered = useMemo(() => (data || []).filter(order => (stage === 'Tất cả' || orderLabel(order) === stage) && normalize(`${order._id} ${order.orderItems.map(item => item.name).join(' ')}`).includes(normalize(query))), [data, query, stage]);
+  const result = paginate(filtered, page, 10);
   if (!session) return <View style={[ui.screen, ui.content]}><SignInPrompt /></View>;
-  return <View style={ui.screen}>
-    <FlatList data={data ?? []} keyExtractor={(order) => order._id} contentContainerStyle={ui.content}
-      refreshing={loading && data !== null} onRefresh={() => { void refresh(); }}
-      ListHeaderComponent={<View style={{ gap: 14 }}><Text style={ui.title}>Đơn hàng của tôi</Text><Text style={ui.muted}>Kéo xuống để cập nhật trạng thái từ website.</Text>{error ? <ErrorCard message={error} onRetry={() => { void refresh(); }} /> : null}</View>}
-      ListEmptyComponent={loading ? <Loading /> : !error ? <Empty title="Chưa có đơn hàng" message="Đơn hàng đã đặt trên website và app sẽ xuất hiện tại đây." /> : null}
-      renderItem={({ item }) => <OrderCard order={item} />} />
-  </View>;
+  return <View style={ui.screen}><FlatList ref={list} data={result.items} keyExtractor={order => order._id} contentContainerStyle={ui.content} refreshing={loading && data !== null} onRefresh={() => { void refresh(); }}
+    ListHeaderComponent={<View style={{ gap: 16, paddingBottom: 16 }}><Text style={ui.title}>Đơn hàng của tôi</Text><Text style={ui.muted}>Theo dõi đơn đã đặt trên app và website</Text>
+      <TextInput accessibilityLabel="Tìm đơn hàng" placeholder="Mã đơn hoặc tên sản phẩm" placeholderTextColor={colors.muted} value={query} onChangeText={value => { setQuery(value); setPage(1); }} style={ui.input} />
+      <ChipRow>{['Tất cả', 'Chờ thanh toán', 'Chờ xác nhận', 'Đã xác nhận', 'Đang vận chuyển', 'Đã giao hàng', 'Đã hủy'].map(value => <Chip key={value} label={value} selected={stage === value} onPress={() => { setStage(value); setPage(1); }} />)}</ChipRow>
+      {error && <ErrorCard message={error} onRetry={() => { void refresh(); }} />}
+    </View>}
+    ListEmptyComponent={loading ? <Loading /> : !error ? <Empty title="Chưa có đơn hàng" message="Đơn hàng phù hợp sẽ xuất hiện tại đây" /> : null}
+    renderItem={({ item }) => <OrderSummary order={item} />}
+    ListFooterComponent={<Pagination {...result} onChange={value => { setPage(value); list.current?.scrollToOffset({ offset: 0, animated: false }); }} />} /></View>;
 }

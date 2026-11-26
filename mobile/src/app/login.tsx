@@ -21,18 +21,19 @@ export default function LoginScreen() {
     setError('');
     try {
       await store.login(email, password);
-      if (router.canGoBack()) router.back();
+      if (store.getSnapshot().session?.user.role === 'seller') router.replace('/(seller)');
+      else if (router.canGoBack()) router.back();
       else router.replace('/(tabs)/account');
     } catch (failure) { setError(errorMessage(failure)); }
     finally { setBusy(false); }
   }
 
-  if (session) return <FormScreen><Text style={ui.heading}>Bạn đã đăng nhập.</Text><Button title="Về sản phẩm" onPress={() => router.replace('/(tabs)')} /></FormScreen>;
+  if (session) return <FormScreen><Text style={ui.heading}>Bạn đã đăng nhập</Text><Button title="Tiếp tục" onPress={() => router.replace(session.user.role === 'seller' ? '/(seller)' : '/(tabs)')} /></FormScreen>;
 
   return <FormScreen>
-    <View style={{ gap: 10, paddingVertical: 12 }}>
-      <Text style={ui.label}>CHÀO MỪNG TRỞ LẠI</Text><Text style={ui.title}>Đăng nhập Net Store</Text>
-      <Text style={ui.muted}>Dùng tài khoản khách mua hàng của website. Bạn chưa có tài khoản? Hãy đăng ký trên website trước.</Text>
+    <View style={{ gap: 12, paddingVertical: 12 }}>
+      <Text style={ui.label}>Tài khoản Net Store</Text><Text style={ui.title}>Đăng nhập</Text>
+      <Text style={ui.muted}>Dùng tài khoản mua hàng hoặc người bán trên website. Đăng ký tài khoản mới trên website nếu bạn chưa có tài khoản.</Text>
     </View>
     <View style={ui.card}>
       <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false}

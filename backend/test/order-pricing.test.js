@@ -21,4 +21,6 @@ test("invalid coupons, stale totals and invalid online amounts are rejected", ()
   }
   assert.throws(() => priceWebOrder(4000, { couponCode: "WELCOME50", paymentMethod: "vnpay" }), { statusCode: 400 });
   assert.throws(() => priceWebOrder(9999999999, { paymentMethod: "vnpay" }), { statusCode: 400 });
+  assert.throws(() => priceWebOrder(6000, { paymentMethod: "vnpay" }), { statusCode: 400 });
+  assert.equal(priceWebOrder(10000, { paymentMethod: "vnpay" }).totalPrice, 10000);
 });

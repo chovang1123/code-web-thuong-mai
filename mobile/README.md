@@ -1,6 +1,6 @@
 # Net Store — bản Android để kiểm tra
 
-App React Native + Expo SDK 57, viết và chạy lệnh bằng VS Code. App gọi chung Express API và MongoDB với website. Thay đổi mã nguồn của phần việc này chỉ nằm trong `mobile/`.
+App React Native + Expo SDK 57, viết và chạy lệnh bằng VS Code. App gọi chung Express API, MongoDB và danh mục chuẩn `shared/catalog-taxonomy.mjs` với website.
 
 ## Kế hoạch và phạm vi bản đầu
 
@@ -14,9 +14,28 @@ App React Native + Expo SDK 57, viết và chạy lệnh bằng VS Code. App g�
 | 6 | Lịch sử và chi tiết đơn | Xem cùng đơn với web, kéo để cập nhật trạng thái |
 | 7 | Làm → kiểm thử → sửa → kiểm thử lại | Kiểm tra logic, màn hình, TypeScript, lint và Android bundle |
 
-Để giữ bản đầu gọn, đăng ký tài khoản thực hiện trên website. App dành cho khách mua hàng; người bán và quản trị dùng website. Chưa thêm quản lý địa chỉ đã lưu, đánh giá, yêu thích, thông báo đẩy hay chức năng người bán trên Android.
+Đăng nhập tài khoản khách để mua hàng hoặc tài khoản seller để vào Net Seller: tổng quan, sản phẩm, đơn hàng và hồ sơ gian hàng. Seller có thể tạo/sửa/xóa sản phẩm, chọn ảnh từ điện thoại, cập nhật tồn kho và xác nhận gửi/đã giao. Quyền sở hữu được backend kiểm tra. Quản trị và đăng ký tài khoản vẫn dùng website; chưa thêm đánh giá, yêu thích hay thông báo đẩy.
 
-Khách có thể chọn COD hoặc VNPay khi đặt đơn. Với đơn online, chọn **Mở cổng thanh toán**, sau đó xem kết quả trong lịch sử đơn. Backend cần cấu hình khóa và URL HTTPS theo `backend/.env.example`.
+Trong **Tài khoản → Địa chỉ và số điện thoại mặc định**, nhập thông tin rồi chọn **Lưu địa chỉ mặc định**. Thông tin được lưu bằng API `/auth/addresses` với token hiện tại, dùng chung với sổ địa chỉ trên web, và được đọc lại khi mở app/checkout. Checkout tự chọn địa chỉ có `isDefault` (hoặc địa chỉ đầu tiên nếu dữ liệu cũ chưa đánh dấu). Có thể sửa mặc định ngay tại checkout hoặc chọn **Giao đến địa chỉ khác** để nhập thông tin riêng cho một đơn; lựa chọn này không ghi đè mặc định. Số điện thoại nhận hàng đi theo địa chỉ đã chọn. Tỉnh/thành phố và quận/huyện được lưu riêng và gửi đủ vào đơn hàng.
+
+Sau khi cập nhật mã phát triển, dùng **Reload** trong menu Expo Go một lần để tạo lại phiên JavaScript; Fast Refresh có thể giữ đối tượng store của bản mã cũ.
+
+Trang chủ tối đa 6 nhóm, mỗi nhóm 6 sản phẩm. Danh sách tìm kiếm/danh mục 12 sản phẩm/trang; giỏ hàng, lịch sử, sản phẩm và đơn seller 10 mục/trang. Danh mục cha/con và bộ lọc thương hiệu/giới tính/hệ điều hành dùng cùng nguồn với web. Mọi sản phẩm vẫn truy cập được qua danh mục hoặc Xem tất cả.
+
+Khách có thể chọn COD hoặc VNPay. Khi xác nhận đơn VNPay, app mở cổng thanh toán ngay; đây mới là đơn chờ, chưa hiển thị thành công. Sau khi quay lại app, màn hình kết quả đọc trạng thái API và kiểm tra lại trong khoảng 30 giây. Chỉ trạng thái `paid` từ backend mới hiện **Đặt hàng thành công**. Hủy/đóng trình duyệt có thể tiếp tục thanh toán cùng đơn trong lịch sử.
+
+## Test VNPay trên Android
+
+1. Khởi động lại backend sau khi cập nhật mã: `cd backend`, `npm run dev` (từ thư mục gốc).
+2. `backend/.env`: giữ `VNP_TMN_CODE`, `VNP_HASH_SECRET`, `PAYMENT_ENV=sandbox`, `PORT=3000`. Không đưa các khóa này vào mobile.
+3. Trên Android Emulator, để trống `VNPAY_MOBILE_RETURN_URL` thì backend dùng `http://10.0.2.2:3000/api/vnpay/return`. Web tiếp tục dùng `VNPAY_RETURN_URL`/localhost riêng. Nếu có `VNPAY_IPN_URL`, mobile mặc định dùng cùng host public làm cầu nối return. Có thể ghi đè bằng `VNPAY_MOBILE_RETURN_URL`.
+4. Trên điện thoại thật, đặt `mobile/.env` là `EXPO_PUBLIC_API_URL=http://<IP-LAN-MAY-TINH>:3000/api` và backend `VNPAY_MOBILE_RETURN_URL=http://<IP-LAN-MAY-TINH>:3000/api/vnpay/return` (cùng mạng), hoặc dùng backend HTTPS public. Khởi động lại backend và Metro. Production yêu cầu HTTPS.
+5. Để VNPay xác nhận đơn qua IPN, chạy `cloudflared tunnel --url http://localhost:3000`, đặt `VNPAY_IPN_URL=https://<HOST-TUNNEL>/api/vnpay/ipn`, khởi động lại backend và cập nhật **IPN đã đăng ký phía VNPay sandbox**. Chỉ sửa `.env` không tự đăng ký URL với VNPay. Giữ tunnel hoạt động; Quick Tunnel đổi URL mỗi lần chạy lại.
+6. Trong `mobile/`, chạy `npm run android` (nếu 8082 bị chiếm, `npm run android -- -Port 8083`). Tạo giao dịch mới từ app, tổng từ 10.000đ. URL giao dịch cũ vẫn mang callback cũ.
+7. NCB sandbox: `9704198526191432198`, `NGUYEN VAN A`, `07/15`, OTP `123456`. Sau thanh toán trình duyệt gọi backend rồi chuyển về `payment-result` trong app; Expo Go dùng link `exp://…/--/payment-result`, bản build dùng `netstore://payment-result`.
+8. Kiểm tra cả thành công, hủy, đóng trình duyệt và thanh toán lại. Nếu chưa nhận IPN, app giữ chờ xác nhận; không tự coi query `result=paid` là bằng chứng đã trả tiền. Seller chưa thể gửi đơn online chưa trả tiền.
+
+Mã xử lý: `src/lib/payment.ts`, `src/app/payment-result.tsx`, backend `src/routes/payment.route.js`, `src/services/payment-gateways.js`. Return URL không chốt đơn; IPN có kiểm chữ ký/số tiền/lần giao dịch và xử lý lặp an toàn.
 
 ## Chạy từ VS Code trên Windows
 

@@ -24,7 +24,7 @@ import { Order } from "../src/models/order.model.js";
 
 const hmac = (alg, secret, input) => createHmac(alg, secret).update(input).digest("hex");
 test("checkout, IPN và tồn kho trên replica set tạm", async t => {
-  Object.assign(process.env, { PAYMENT_ENV: "sandbox", PAYMENT_PUBLIC_URL: "https://shop.test", VNP_TMN_CODE: "TESTSHOP",
+  Object.assign(process.env, { PAYMENT_ENV: "sandbox", VNPAY_RETURN_URL: "", VNPAY_IPN_URL: "https://ipn.example.test/api/vnpay/ipn", VNP_TMN_CODE: "TESTSHOP",
     VNP_HASH_SECRET: "test-vnp",
     MONGO_URI: "test-signing-key" });
   const tmp = await mkdtemp(path.join(os.tmpdir(), "shop-pay-test-"));
@@ -51,7 +51,7 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
   await Promise.all(Object.values(mongoose.models).map(m => m.init()));
   const user = await User.create({ name: "Test", email: "test@example.test", clerkId: "test" });
   const other = await User.create({ name: "Other", email: "other@example.test" });
-  const product = await Product.create({ name: "Test", description: "test", sellerId: other.id, category: "test", stock: 10, price: 10000 });
+  const product = await Product.create({ name: "Test", description: "test", sellerId: other.id, category: "test", stock: 10, price: 20000 });
   const cart = await Cart.create({ user: user.id, clerkId: user.clerkId });
   const app = express();
   app.use(express.json());
@@ -75,7 +75,7 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
   }
   function signedParams(ref, opts = {}, tamper = false) {
     const params = new URLSearchParams({ vnp_TmnCode: "TESTSHOP", vnp_TxnRef: ref, vnp_TransactionNo: "1234",
-      vnp_Amount: "900000", vnp_ResponseCode: "00", vnp_TransactionStatus: "00", ...opts });
+      vnp_Amount: "1800000", vnp_ResponseCode: "00", vnp_TransactionStatus: "00", ...opts });
     params.sort();
     params.set("vnp_SecureHash", hmac("sha512", "test-vnp", params.toString()));
     if (tamper) params.set("vnp_Amount", "1");
@@ -95,7 +95,7 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
     assert.equal((await Cart.findById(cart.id)).items.length, 1);
   });
   await t.test("VNPay: quyền truy cập, số tiền, chữ ký, callback lặp và trạng thái giao hàng", async () => {
-    const options = { paymentMethod: "vnpay", couponCode: "NET10", expectedTotal: 9000, checkoutReference: "a".repeat(32) };
+    const options = { paymentMethod: "vnpay", couponCode: "NET10", expectedTotal: 18000, checkoutReference: "a".repeat(32) };
     const { order } = await (await checkout(options)).json();
     const ref = order._id;
     const replay = await (await post("/orders", { shippingAddress, ...options })).json();
@@ -113,18 +113,30 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
     assert.equal((await Order.findById(ref)).paymentStatus, "failed");
     const url = await begin("VNBANK");
     const latest = url.searchParams.get("vnp_TxnRef");
+    assert.equal(url.searchParams.get("vnp_ReturnUrl"), `http://localhost:${server.address().port}/api/vnpay/return`);
+    assert.equal(url.searchParams.has("vnp_IpnUrl"), false);
     assert.match(latest, /^[a-zA-Z0-9]+$/);
     assert.notEqual(latest, firstRef);
     assert.equal((await vnCallback(firstRef)).RspCode, "01");
     assert.equal(url.searchParams.get("vnp_BankCode"), "VNBANK");
     const params = new URL(url).searchParams;
-    assert.equal(params.get("vnp_Amount"), "900000");
+    assert.equal(params.get("vnp_Amount"), "1800000");
     const signature = params.get("vnp_SecureHash");
     params.delete("vnp_SecureHash");
     assert.equal(signature, hmac("sha512", "test-vnp", params.toString()));
     assert.equal((await vnCallback(latest, {}, true)).RspCode, "97");
     assert.equal((await vnCallback(latest, { vnp_Amount: "1" })).RspCode, "04");
     assert.equal((await request(base + "/vnpay/return?vnp_TxnRef=" + latest)).status, 400);
+    assert.equal((await request(base + "/vnpay/return?" + signedParams("missing"))).status, 404);
+    const wrongAmount = await request(base + "/vnpay/return?" + signedParams(latest, { vnp_Amount: "17100000" }));
+    assert.equal(wrongAmount.status, 400);
+    assert.match(await wrongAmount.text(), /Số tiền/);
+    for (const callback of [{}, { vnp_ResponseCode: "00", vnp_TransactionStatus: "02" }, { vnp_ResponseCode: "07", vnp_TransactionStatus: "00" }]) {
+      const response = await request(base + "/vnpay/return?" + signedParams(latest, callback), { redirect: "manual" });
+      assert.equal(response.status, 303);
+      assert.equal(new URL(response.headers.get("location")).searchParams.get("result"), Object.keys(callback).length ? "failed" : "pending");
+      assert.equal((await Order.findById(ref)).paymentStatus, "unpaid");
+    }
     const returned = await request(base + "/vnpay/return?" + signedParams(latest, { vnp_ResponseCode: "24" }), { redirect: "manual" });
     assert.equal(returned.status, 303);
     assert.equal(new URL(returned.headers.get("location")).searchParams.get("orderId"), ref);
@@ -139,13 +151,21 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
     assert.equal((await Order.findById(ref)).orderItems[0].sellerStatus, "pending");
     let stats;
     await getDashboardStats({}, { status() { return this; }, json(data) { stats = data; } });
-    assert.equal(stats.totalRevenue, 10000);
+    assert.equal(stats.totalRevenue, 20000);
     await Order.collection.updateOne({ _id: new mongoose.Types.ObjectId(ref) }, { $set: { createdAt: new Date(0) } });
     await advanceOrderStatuses();
     assert.equal((await Order.findById(ref)).status, "pending");
     const codes = await Promise.all([vnCallback(latest), vnCallback(latest)]);
     assert.deepEqual(codes.map(x => x.RspCode).sort(), ["00", "02"]);
     assert.equal((await Order.findById(ref)).paymentResult.status, "paid");
+    const paidAt = (await Order.findById(ref)).paidAt;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const returned = await request(base + "/vnpay/return?" + signedParams(latest), { redirect: "manual" });
+      assert.equal(new URL(returned.headers.get("location")).searchParams.get("result"), "paid");
+    }
+    assert.equal((await vnCallback(latest, { vnp_ResponseCode: "24" })).RspCode, "02");
+    assert.equal(+(await Order.findById(ref)).paidAt, +paidAt);
+    assert.equal((await Order.findById(ref)).paymentStatus, "paid");
     await sellerUpdate("shipped");
     await sellerUpdate("delivered");
     assert.equal((await Order.findById(ref)).status, "delivered");
@@ -242,5 +262,31 @@ test("checkout, IPN và tồn kho trên replica set tạm", async t => {
       Order.startSession = originalSession;
       await Product.updateOne({ _id: product.id }, { price: original.price, stock: original.stock });
     }
+  });
+  await t.test("Android returns to the stored app route; only IPN confirms payment", async () => {
+    const { order } = await (await checkout({ paymentMethod: 'vnpay' })).json();
+    assert.equal((await post('/vnpay/create', { orderId: order._id, appReturnUrl: 'https://untrusted.example.test' })).status, 400);
+    const appReturnUrl = 'exp://127.0.0.1:8082/--/payment-result';
+    const begin = await post('/vnpay/create', { orderId: order._id, appReturnUrl });
+    assert.equal(begin.status, 200);
+    const url = new URL((await begin.json()).url);
+    assert.equal(url.searchParams.get('vnp_ReturnUrl'), 'https://ipn.example.test/api/vnpay/return');
+    const ref = url.searchParams.get('vnp_TxnRef');
+    const query = signedParams(ref, { vnp_Amount: String(order.totalPrice * 100) });
+    const returned = await request(base + '/vnpay/return?' + query, { redirect: 'manual' });
+    const target = new URL(returned.headers.get('location'));
+    assert.equal(returned.status, 303);
+    assert.equal(target.protocol, 'exp:');
+    assert.equal(target.pathname, '/--/payment-result');
+    assert.equal(target.searchParams.get('orderId'), order._id);
+    assert.equal(target.searchParams.get('result'), 'pending');
+    assert.equal((await Order.findById(order._id)).paymentStatus, 'unpaid');
+    const cancelled = await request(base + '/vnpay/return?' + signedParams(ref, { vnp_Amount: String(order.totalPrice * 100), vnp_ResponseCode: '24' }), { redirect: 'manual' });
+    assert.equal(new URL(cancelled.headers.get('location')).searchParams.get('result'), 'cancelled');
+    assert.equal((await request(base + '/vnpay/return?' + signedParams(ref, { vnp_Amount: String(order.totalPrice * 100) }, true), { redirect: 'manual' })).status, 400);
+    assert.equal((await vnCallback(ref, { vnp_Amount: String(order.totalPrice * 100) })).RspCode, '00');
+    const status = await request(base + '/orders/' + order._id + '/status', { headers: { Authorization: 'Bearer ' + createWebAuthToken(user.id) } });
+    assert.equal((await status.json()).paymentStatus, 'paid');
+    assert.equal((await vnCallback(ref, { vnp_Amount: String(order.totalPrice * 100) })).RspCode, '02');
   });
 });

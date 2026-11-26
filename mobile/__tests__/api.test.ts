@@ -30,6 +30,23 @@ test('cart PUT uses the existing backend payload and bearer auth', async () => {
   }));
 });
 
+test('seller photo sends multipart bytes to the backend without a JSON content type', async () => {
+  const fetcher = jest.fn<Promise<Response>, [string, RequestInit?]>(async () => response({ url: 'https://cdn.test/photo.png', publicId: 'products/photo' }));
+  await createApi('http://server/api', fetcher).uploadSellerImage('seller-token', { uri: 'file:///phone/photo.png', name: 'photo.png', type: 'image/png' });
+  expect(fetcher).toHaveBeenCalledWith('http://server/api/seller/uploads', expect.objectContaining({ method: 'POST', body: expect.any(FormData), headers: { Accept: 'application/json', Authorization: 'Bearer seller-token' } }));
+});
+
+test('saved delivery addresses use the authenticated web address API for both reading and updating', async () => {
+  const address = { label: 'Nhà riêng', fullName: 'An', phoneNumber: '0912345678', streetAddress: '12 ABC', state: 'TP.HCM', city: 'Quận 1', isDefault: true };
+  const fetcher = jest.fn<Promise<Response>, [string, RequestInit?]>()
+    .mockResolvedValueOnce(response({ addresses: [{ ...address, _id: 'a1' }] }))
+    .mockResolvedValueOnce(response({ address: { ...address, _id: 'a1' } }));
+  const api = createApi('http://server/api', fetcher);
+  expect(await api.addresses('token')).toEqual([{ ...address, _id: 'a1' }]);
+  await api.saveAddress('token', address, 'a1');
+  expect(fetcher).toHaveBeenLastCalledWith('http://server/api/auth/addresses/a1', expect.objectContaining({ method: 'PUT', body: JSON.stringify(address), headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer token' } }));
+});
+
 test('surfaces stock errors from the server and translates an expired session', async () => {
   const fetcher = jest.fn<Promise<Response>, [string, RequestInit?]>()
     .mockResolvedValueOnce(response({ error: 'Insufficient stock' }, 400))

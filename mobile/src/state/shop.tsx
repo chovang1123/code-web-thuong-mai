@@ -16,7 +16,7 @@ const storage: SessionStorage = {
     const value = await SecureStore.getItemAsync(SESSION_KEY);
     if (!value) return null;
     const session = JSON.parse(value) as Session;
-    if (!session.token || !session.user?.id || session.user.role !== 'customer') {
+    if (!session.token || !session.user?.id || !['customer', 'seller'].includes(session.user.role)) {
       await SecureStore.deleteItemAsync(SESSION_KEY);
       return null;
     }

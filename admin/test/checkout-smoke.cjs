@@ -29,8 +29,8 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
     for (const [key, value] of Object.entries({ user: "Test", email: "test@example.test", role: "customer", token: "token" })) {
       w.localStorage.setItem("net_store_" + key, value);
     }
-    const price = couponCode === "WELCOME50" || couponCode === "FREESHIP" ? 100000 : 10000;
-    const expectedTotal = couponCode === "NET10" ? 9000 : couponCode === "WELCOME50" ? 50000 : couponCode === "FREESHIP" ? 70000 : price;
+    const price = couponCode === "WELCOME50" || couponCode === "FREESHIP" ? 100000 : 20000;
+    const expectedTotal = couponCode === "NET10" ? 18000 : couponCode === "WELCOME50" ? 50000 : couponCode === "FREESHIP" ? 70000 : price;
     const product = { _id: "p1", price, category: "Test", name: "Test product", images: [], stock: 9 };
     const items = [{ product, quantity: 1 }];
     const submitted = [];
@@ -50,7 +50,7 @@ for (const method of ["cod", "VNBANK", "INTCARD"]) {
         }
         return Response.json({ addresses: savedAddresses });
       }
-      if (url.endsWith("/payments/methods")) return Response.json({ cod: true, vnpay: true });
+      if (url.endsWith("/payments/methods")) return Response.json({ cod: true, vnpay: true, vnpayMinAmount: 10000 });
       if (url.endsWith("/cart/web")) return Response.json({ cart: { items } });
       if (url.endsWith("/products")) return Response.json([product]);
       if (url.endsWith("/orders/web")) {

@@ -22,7 +22,8 @@ export default function CheckoutPanel({ authToken, authEmail, cart, coupon, coup
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totals = checkoutTotals(subtotal, coupon);
   const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const onlineAmountValid = paymentMethod !== "vnpay" || (totals.total >= 5000 && totals.total <= 999999999 && Number.isSafeInteger(totals.total));
+  const minimumOnlineAmount = methods?.vnpayMinAmount || 10000;
+  const onlineAmountValid = paymentMethod !== "vnpay" || (totals.total >= minimumOnlineAmount && totals.total <= 999999999 && Number.isSafeInteger(totals.total));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -61,7 +62,7 @@ export default function CheckoutPanel({ authToken, authEmail, cart, coupon, coup
           const cod = value === "cod";
           const unavailable = cod ? methods?.cod === false : methods?.vnpay !== true;
           return <label className={`payment-option ${unavailable ? "is-unavailable" : ""}`} key={value}><input type="radio" name="paymentMethod" value={value} checked={paymentMethod === "cod" ? cod : value === channel} disabled={submitting || unavailable} onChange={() => { setPaymentMethod(cod ? "cod" : "vnpay"); setChannel(value); setMessage(""); }} /><span className="payment-badge">{cod ? "COD" : value === "VNBANK" ? "VNPay · ATM" : "VNPay · Visa"}</span><span>{cod ? "Thanh toán khi nhận hàng" : value === "VNBANK" ? "Thẻ ATM nội địa / tài khoản ngân hàng" : "Thẻ quốc tế Visa / Mastercard"}{unavailable && <small>{methods ? "Hiện chưa khả dụng" : "Đang kiểm tra kết nối"}</small>}</span></label>;
-        })}</fieldset>{!onlineAmountValid && <p role="alert" className="checkout-message">VNPay hỗ trợ tổng thanh toán từ 5.000đ đến 999.999.999đ. Bạn có thể chọn COD.</p>}</section>
+        })}</fieldset>{!onlineAmountValid && <p role="alert" className="checkout-message">Tổng thanh toán VNPay cần từ {formatPrice(minimumOnlineAmount)} đến 999.999.999đ. Bạn có thể chọn COD.</p>}</section>
       </div>
       <aside className="checkout-card checkout-summary order-summary" aria-label="Tóm tắt đơn hàng"><h2>Đơn hàng</h2><details className="checkout-voucher-picker"><summary>Chọn hoặc nhập voucher{couponCode ? ` · ${couponCode}` : ""}</summary><VoucherInput id="checkout-voucher" value={couponInput} onChange={onCouponInput} onApply={onApplyCoupon} message={couponMessage} appliedCode={couponCode} disabled={submitting} /></details><dl className="order-amounts"><div><dt>Tiền hàng ({count})</dt><dd>{formatPrice(totals.subtotal)}</dd></div><div><dt>Phí vận chuyển</dt><dd>{formatPrice(totals.shipping)}</dd></div><div><dt>Voucher</dt><dd>{totals.discount > 0 ? `−${formatPrice(totals.discount)}` : "Chưa áp dụng"}</dd></div><div className="order-total"><dt>Tổng thanh toán</dt><dd>{formatPrice(totals.total)}</dd></div></dl>{message && <p className="checkout-message" role="alert">{message}</p>}<button type="submit" className="primary-button place-order-button" disabled={submitting || !cart.length || !shippingAddress || !onlineAmountValid || methods?.[paymentMethod] === false || (paymentMethod === "vnpay" && methods?.vnpay !== true)}>{submitting ? "Đang đặt hàng..." : "Đặt hàng"}</button><p className="checkout-trust"><ShieldCheck size={15} aria-hidden="true" />Thông tin được bảo mật</p><p className="checkout-trust">Kiểm tra kỹ địa chỉ trước khi đặt hàng.</p></aside>
     </form>

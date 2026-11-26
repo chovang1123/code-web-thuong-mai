@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useState } from "react";
+import { createElement, useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -29,7 +29,6 @@ const initialProductForm = {
   tags: "", brand: "", gender: "", os: "",
   price: "",
   stock: "",
-  image: "",
 };
 
 async function sellerRequest(token, path, options = {}) {
@@ -37,7 +36,7 @@ async function sellerRequest(token, path, options = {}) {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.body && !(options.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
       ...options.headers,
     },
   });
@@ -56,7 +55,10 @@ function SellerDashboard({ name, email, token, onLogout }) {
   const [notice, setNotice] = useState("");
   const [productDialog, setProductDialog] = useState(undefined);
   const [productForm, setProductForm] = useState(initialProductForm);
+  const [productImage, setProductImage] = useState(null);
+  const [productError, setProductError] = useState("");
   const [savingProduct, setSavingProduct] = useState(false);
+  const productSaveRef = useRef(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: "", location: "" });
   const [updatingOrder, setUpdatingOrder] = useState("");
@@ -81,6 +83,13 @@ function SellerDashboard({ name, email, token, onLogout }) {
     loadDashboard();
   }, [loadDashboard]);
 
+  const productImagePreview = productImage?.preview;
+  useEffect(() => {
+    if (productImagePreview) return () => URL.revokeObjectURL(productImagePreview);
+  }, [productImagePreview]);
+
+  useEffect(() => () => productSaveRef.current?.abort(), []);
+
   const stats = dashboard?.stats;
   const chart = dashboard?.chart || [];
   const products = dashboard?.products || [];
@@ -88,7 +97,12 @@ function SellerDashboard({ name, email, token, onLogout }) {
   const maxRevenue = Math.max(...chart.map((item) => item.revenue), 1);
 
   const openProductDialog = (product = null) => {
+    productSaveRef.current?.abort();
+    productSaveRef.current = null;
+    setSavingProduct(false);
     setNotice("");
+    setProductError("");
+    setProductImage(null);
     setProductForm(
       product
         ? {
@@ -98,37 +112,82 @@ function SellerDashboard({ name, email, token, onLogout }) {
             tags: (product.tags || []).join(", "), brand: product.brand || "", gender: product.gender || "", os: product.os || "",
             price: String(product.price ?? ""),
             stock: String(product.stock ?? ""),
-            image: product.images?.[0] || "",
           }
         : initialProductForm,
     );
     setProductDialog(product);
   };
 
+  const closeProductDialog = () => {
+    productSaveRef.current?.abort();
+    productSaveRef.current = null;
+    setSavingProduct(false);
+    setProductDialog(undefined);
+    setProductError("");
+    setProductImage(null);
+  };
+
+  const selectProductImage = (event) => {
+    const file = event.target.files?.[0];
+    setProductError("");
+    setProductImage(null);
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+      setProductError("Chỉ chấp nhận ảnh JPG, PNG hoặc WebP.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setProductError("Ảnh phải có dung lượng tối đa 5 MB.");
+      event.target.value = "";
+      return;
+    }
+    setProductImage({ file, preview: URL.createObjectURL(file) });
+  };
+
   const saveProduct = async (event) => {
     event.preventDefault();
+    if (savingProduct) return;
+    if (!productImage && !productDialog?.images?.length) {
+      setProductError("Vui lòng chọn ảnh sản phẩm từ máy.");
+      return;
+    }
+    const controller = new AbortController();
+    productSaveRef.current = controller;
     setSavingProduct(true);
-    setError("");
+    setProductError("");
     try {
       const isEditing = Boolean(productDialog?._id);
       const path = isEditing
         ? `/products/${productDialog._id}`
         : "/products";
+      let image = productImage?.uploaded;
+      if (productImage && !image) {
+        const uploadBody = new FormData();
+        uploadBody.append("image", productImage.file);
+        image = await sellerRequest(token, "/uploads", {
+          method: "POST", body: uploadBody, signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
+        setProductImage(current => current?.file === productImage.file ? { ...current, uploaded: image } : current);
+      }
       await sellerRequest(token, path, {
         method: isEditing ? "PUT" : "POST",
-        body: JSON.stringify({
-          ...productForm,
-          price: Number(productForm.price),
-          stock: Number(productForm.stock),
-        }),
+        body: JSON.stringify({ ...productForm, ...(image ? { image } : {}) }),
+        signal: controller.signal,
       });
+      if (controller.signal.aborted) return;
       setProductDialog(undefined);
+      setProductImage(null);
       setNotice(isEditing ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm mới.");
       await loadDashboard();
     } catch (requestError) {
-      setError(requestError.message);
+      if (!controller.signal.aborted) setProductError(requestError.message);
     } finally {
-      setSavingProduct(false);
+      if (productSaveRef.current === controller) {
+        productSaveRef.current = null;
+        setSavingProduct(false);
+      }
     }
   };
 
@@ -210,6 +269,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
               onClick={() => {
                 setActiveSection(id);
                 setNotice("");
+                setError("");
               }}
               type="button"
             >
@@ -246,7 +306,7 @@ function SellerDashboard({ name, email, token, onLogout }) {
         </header>
 
         <div className="seller-content">
-          {error && <div className="seller-alert seller-alert-error" role="alert">{error}</div>}
+          {error && <div className="seller-alert seller-alert-error seller-dismissible-alert" role="alert"><span>{error}</span><button className="seller-close-button" onClick={() => setError("")} type="button" aria-label="Đóng thông báo lỗi"><X size={16} /></button></div>}
           {notice && <div className="seller-alert seller-alert-success" role="status">{notice}</div>}
 
           {loading ? (
@@ -425,12 +485,12 @@ function SellerDashboard({ name, email, token, onLogout }) {
 
       {productDialog !== undefined && (
         <div className="seller-modal-backdrop" onMouseDown={(event) => {
-          if (event.target === event.currentTarget) setProductDialog(undefined);
+          if (event.target === event.currentTarget) closeProductDialog();
         }}>
-          <form className="seller-product-modal" onSubmit={saveProduct}>
+          <form className="seller-product-modal" onSubmit={saveProduct} role="dialog" aria-modal="true" aria-labelledby="seller-product-title">
             <div className="seller-modal-heading">
-              <div><p className="seller-section-kicker">{productDialog ? "CẬP NHẬT" : "SẢN PHẨM MỚI"}</p><h2>{productDialog ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm"}</h2></div>
-              <button className="seller-close-button" onClick={() => setProductDialog(undefined)} type="button" aria-label="Đóng"><X size={20} /></button>
+              <div><p className="seller-section-kicker">{productDialog ? "CẬP NHẬT" : "SẢN PHẨM MỚI"}</p><h2 id="seller-product-title">{productDialog ? "Chỉnh sửa sản phẩm" : "Thêm sản phẩm"}</h2></div>
+              <button className="seller-close-button" onClick={closeProductDialog} type="button" aria-label="Đóng"><X size={20} /></button>
             </div>
             <label>Tên sản phẩm<input required maxLength="120" value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Tên sản phẩm" /></label>
             <label>Mô tả<textarea required rows="3" value={productForm.description} onChange={(event) => setProductForm({ ...productForm, description: event.target.value })} placeholder="Mô tả sản phẩm" /></label>
@@ -439,10 +499,12 @@ function SellerDashboard({ name, email, token, onLogout }) {
               <label>Giá bán (₫)<input required type="number" min="0" step="1000" value={productForm.price} onChange={(event) => setProductForm({ ...productForm, price: event.target.value })} placeholder="250000" /></label>
               <label>Số lượng tồn<input required type="number" min="0" step="1" value={productForm.stock} onChange={(event) => setProductForm({ ...productForm, stock: event.target.value })} placeholder="20" /></label>
             </div>
-            <label>Đường dẫn ảnh<input required type="url" value={productForm.image} onChange={(event) => setProductForm({ ...productForm, image: event.target.value })} placeholder="https://…" /></label>
-            {error && <div className="seller-alert seller-alert-error" role="alert">{error}</div>}
+            <label>Ảnh sản phẩm<input required={!productDialog?.images?.length} type="file" accept="image/jpeg,image/png,image/webp" onChange={selectProductImage} disabled={savingProduct} aria-describedby="seller-image-help" /></label>
+            <p className="seller-image-help" id="seller-image-help">Chọn ảnh JPG, PNG hoặc WebP từ máy, tối đa 5 MB.{productDialog?.images?.length ? " Giữ nguyên ảnh hiện tại nếu không chọn ảnh mới." : ""}</p>
+            {(productImage?.preview || productDialog?.images?.[0]) && <img className="seller-image-preview" src={productImage?.preview || productDialog.images[0]} alt="Ảnh xem trước sản phẩm" />}
+            {productError && <div className="seller-alert seller-alert-error seller-dismissible-alert" role="alert"><span>{productError}</span><button className="seller-close-button" onClick={() => setProductError("")} type="button" aria-label="Đóng lỗi sản phẩm"><X size={16} /></button></div>}
             <div className="seller-modal-actions">
-              <button className="seller-secondary-button" onClick={() => setProductDialog(undefined)} type="button">Hủy</button>
+              <button className="seller-secondary-button" onClick={closeProductDialog} type="button">Hủy</button>
               <button className="seller-primary-button" disabled={savingProduct} type="submit">{savingProduct ? "Đang lưu…" : productDialog ? "Lưu thay đổi" : "Thêm sản phẩm"}</button>
             </div>
           </form>

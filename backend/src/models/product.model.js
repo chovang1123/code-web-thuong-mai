@@ -62,6 +62,7 @@ const productSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    imagePublicIds: { type: [String], default: [] },
     averageRating: {
       type: Number,
       min: 0,
